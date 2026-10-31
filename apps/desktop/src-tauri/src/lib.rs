@@ -5,7 +5,7 @@ use futures_util::future::{AbortHandle, Abortable};
 use futures_util::StreamExt;
 use localmind_core::{
     ollama::{check as ollama_check, OllamaStatus},
-    process::background_command,
+    process::{background_command, OwnedChild},
     sidecar::SidecarHandle,
 };
 use serde::{Deserialize, Serialize};
@@ -29,7 +29,7 @@ struct RuntimeStatus {
 }
 struct OllamaState(Mutex<Option<OllamaStatus>>);
 /// Holds the child process for a bundled Ollama we started ourselves.
-struct OllamaProcess(Mutex<Option<std::process::Child>>);
+struct OllamaProcess(Mutex<Option<OwnedChild>>);
 
 // ---------------------------------------------------------------------------
 // Bundled Ollama helpers
@@ -93,7 +93,7 @@ async fn ensure_ollama(app_handle: tauri::AppHandle) {
         .env("OLLAMA_HOST", "127.0.0.1:11434")
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null());
-    match ollama_command.spawn() {
+    match OwnedChild::spawn(&mut ollama_command) {
         Ok(child) => {
             *app_handle.state::<OllamaProcess>().0.lock().unwrap() = Some(child);
             // Wait up to 30 s for the server to become ready.
@@ -2088,14 +2088,11 @@ pub fn run() {
                 // alive, then drop them before touching the child — this satisfies
                 // the borrow checker (guard must be dropped before State, which
                 // must be dropped before AppHandle).
-                let child: Option<std::process::Child> = {
+                let child: Option<OwnedChild> = {
                     let state: tauri::State<'_, OllamaProcess> = handle.state();
                     state.0.lock().ok().and_then(|mut g| g.take())
                 };
-                if let Some(mut c) = child {
-                    let _ = c.kill();
-                    let _ = c.wait();
-                }
+                drop(child);
             }
         })
         .invoke_handler(tauri::generate_handler![

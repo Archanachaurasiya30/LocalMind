@@ -35,6 +35,11 @@
     "active": true,
     "targets": "all",
     "createUpdaterArtifacts": "v1Compatible",
+    "windows": {
+      "nsis": {
+        "installerHooks": "installer-hooks.nsh"
+      }
+    },
     "macOS": {
       "minimumSystemVersion": "14.0",
       "hardenedRuntime": false

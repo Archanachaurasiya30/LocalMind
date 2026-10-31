@@ -123,6 +123,7 @@ Ollama stores models separately. See [desktop runtime and storage](docs/DESKTOP_
 | Problem | Next step |
 | --- | --- |
 | AI service will not start | Use Retry. Close another LocalMind instance using the same profile. |
+| Windows setup cannot write `localmind-sidecar.exe` | Close LocalMind and mini chat, then choose Retry. If an older version left a background service running, restart Windows and run setup before opening LocalMind. Do not choose Ignore: that can leave a mixed-version installation. |
 | Model unavailable or responses slow | Complete its download or select a smaller model. Check memory and supported thinking settings. |
 | Knowledge is incomplete | Inspect indexing status and permissions, then retry. PDFs need selectable text; OCR and automatic file watching are not implemented. |
 | Source changed or disappeared | Citations show indexed passages. Reindex to refresh; older citations may no longer resolve afterward. |

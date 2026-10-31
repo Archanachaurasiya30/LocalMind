@@ -168,6 +168,12 @@ jobs:
       - name: Test installer payloads
         run: python scripts/release/smoke_bundle.py --target ${{ matrix.target }}
 
+      - name: Test Windows upgrade file locks
+        if: runner.os == 'Windows'
+        run: python -m unittest discover -s scripts/release -p "test_windows_upgrade.py" -v
+        env:
+          LOCALMIND_TEST_NSIS: "1"
+
       - name: Collect release assets
         run: python scripts/release/artifacts.py collect --target ${{ matrix.target }} --version ${{ needs.version.outputs.version }} --out release-platform
 

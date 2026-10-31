@@ -3,6 +3,9 @@
 use std::ffi::OsStr;
 use std::process::Command;
 
+mod owned;
+pub use owned::OwnedChild;
+
 /// Console executables must not create a terminal when launched by the GUI.
 /// Keep this on the command itself so conversion into a Tokio command preserves
 /// the Windows flags, while stdout and stderr remain available for diagnostics.

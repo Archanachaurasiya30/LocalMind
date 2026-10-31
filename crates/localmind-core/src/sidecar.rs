@@ -9,11 +9,11 @@
 
 use std::net::TcpListener;
 use std::path::PathBuf;
-use std::process::{Child, Stdio};
+use std::process::Stdio;
 use std::time::Duration;
 
 use rand::Rng;
-use crate::process::background_command;
+use crate::process::{background_command, OwnedChild};
 
 // ---------------------------------------------------------------------------
 // Port selection
@@ -128,7 +128,7 @@ fn python_exe() -> &'static str {
 ///
 /// The sidecar is killed automatically when this value is dropped.
 pub struct SidecarHandle {
-    child: Child,
+    child: OwnedChild,
     /// Port the sidecar is bound to. Used by the Rust core to route API calls.
     pub port: u16,
     /// Per-session bearer token. Must be included in every request to the sidecar.
@@ -167,7 +167,7 @@ impl SidecarHandle {
             .env("LOCALMIND_TOKEN", &token)
             .env("LOCALMIND_DATA_DIR", data_dir.to_string_lossy().as_ref())
             .stderr(Stdio::inherit());
-        let child = command.spawn().map_err(SidecarError::Spawn)?;
+        let child = OwnedChild::spawn(&mut command).map_err(SidecarError::Spawn)?;
 
         Ok(SidecarHandle { child, port, token })
     }
@@ -194,7 +194,7 @@ impl SidecarHandle {
             .env("LOCALMIND_TOKEN", &token)
             .env("LOCALMIND_DATA_DIR", data_dir.to_string_lossy().as_ref())
             .stderr(Stdio::inherit());
-        let child = command.spawn().map_err(SidecarError::Spawn)?;
+        let child = OwnedChild::spawn(&mut command).map_err(SidecarError::Spawn)?;
 
         Ok(SidecarHandle { child, port, token })
     }
@@ -239,15 +239,6 @@ impl SidecarHandle {
             Some(status) => Err(SidecarError::Exited(status.to_string())),
             None => Ok(()),
         }
-    }
-}
-
-impl Drop for SidecarHandle {
-    /// Kills the sidecar child process when the handle is dropped.
-    /// This fires when the Tauri app exits and drops its managed state.
-    fn drop(&mut self) {
-        let _ = self.child.kill();
-        let _ = self.child.wait();
     }
 }
 
@@ -297,10 +288,9 @@ mod tests {
     #[tokio::test]
     async fn stopped_child_is_reported_before_health_timeout() {
         // The test runner's --help mode is a portable, immediately exiting child.
-        let mut child = background_command(std::env::current_exe().unwrap())
+        let mut child = OwnedChild::spawn(background_command(std::env::current_exe().unwrap())
             .arg("--help")
-            .stdout(Stdio::null())
-            .spawn().unwrap();
+            .stdout(Stdio::null())).unwrap();
         child.wait().unwrap();
         let mut handle = SidecarHandle { child, port: 1, token: "test-only".into() };
         let result = tokio::time::timeout(Duration::from_secs(1), handle.wait_until_ready())
