@@ -176,6 +176,21 @@ function composerProps() {
 }
 
 describe("composer keyboard controls", () => {
+  it("shows enabled context and opens voice controls without changing the draft", () => {
+    const props = composerProps();
+    const { rerender } = render(<Composer {...props} />);
+    expect(screen.getByLabelText("Enabled context").textContent).toBe("ContextMemory");
+    expect(screen.queryByRole("region", { name: "Local voice controls" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Voice controls" }));
+    const panel = screen.getByRole("region", { name: "Local voice controls" });
+    expect(screen.getByRole("button", { name: "Voice controls" }).getAttribute("aria-controls")).toBe(panel.id);
+    expect((screen.getByRole("textbox", { name: "Message LocalMind" }) as HTMLTextAreaElement).value).toBe("A draft");
+    expect(props.onSend).not.toHaveBeenCalled();
+    rerender(<Composer {...props} knowledgeEnabled webSearchEnabled />);
+    expect(screen.getByLabelText("Enabled context").textContent).toBe("ContextMemoryKnowledgeWeb");
+    expect(screen.getByText(/Search queries leave this device/)).toBeTruthy();
+  });
+
   it("sends with Enter while preserving Shift+Enter and IME composition", () => {
     const props = composerProps();
     render(<Composer {...props} />);

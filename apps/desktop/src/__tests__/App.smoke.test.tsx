@@ -204,7 +204,7 @@ describe("mini chat window", () => {
     fireEvent.click(screen.getByRole("button", { name: "Expand chat" }));
     await screen.findByRole("button", { name: "Mini chat" });
     fireEvent.click(screen.getByRole("button", { name: /New chat/ }));
-    await screen.findByRole("heading", { name: /Good things start/ });
+    await screen.findByRole("heading", { name: /What’s on your mind/ });
     expect(screen.queryByText("Previous answer")).toBeNull();
     expect(screen.queryByRole("log", { name: "Conversation" })).toBeNull();
   });
