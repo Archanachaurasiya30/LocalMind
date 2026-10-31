@@ -1,4 +1,5 @@
 import { ArrowUpRight, Compass, Lightbulb, PenLine } from "lucide-react";
+import { useSpotlight } from "../hooks/useSpotlight";
 
 const STARTERS = [
   { label: "Think it through", detail: "Explore an idea", text: "Help me think through an idea: ", Icon: Lightbulb },
@@ -8,10 +9,17 @@ const STARTERS = [
 
 export function ChatStarters({ onChoose }: { onChoose: (prompt: string) => void }) {
   return <div className="starter-prompts" aria-label="Ways to start a conversation">
-    {STARTERS.map(({ label, detail, text, Icon }) => <button type="button" key={label} onClick={() => onChoose(text)}>
+    {STARTERS.map(starter => <Starter key={starter.label} starter={starter} onChoose={onChoose} />)}
+  </div>;
+}
+
+function Starter({ starter: { label, detail, text, Icon }, onChoose }: {
+  starter: typeof STARTERS[number]; onChoose: (prompt: string) => void;
+}) {
+  const spotlight = useSpotlight<HTMLButtonElement>();
+  return <button type="button" className="spotlight-surface" {...spotlight} onClick={() => onChoose(text)}>
       <Icon size={19} strokeWidth={1.6} aria-hidden="true" />
       <span><strong>{label}</strong><small>{detail}</small></span>
       <ArrowUpRight size={14} aria-hidden="true" />
-    </button>)}
-  </div>;
+    </button>;
 }

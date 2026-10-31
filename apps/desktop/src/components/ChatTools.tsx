@@ -23,7 +23,7 @@ export function ChatTools(props: Props) {
       event.preventDefault();
       event.stopPropagation();
       setOpen(false);
-      trigger.current?.focus();
+      trigger.current?.focus({ preventScroll: true });
     };
     document.addEventListener("pointerdown", dismiss);
     document.addEventListener("keydown", escape, true);
@@ -37,12 +37,11 @@ export function ChatTools(props: Props) {
     { name: "Knowledge", enabled: props.knowledgeEnabled, toggle: props.onKnowledgeToggle, Icon: BookOpen, detail: "Search your indexed documents" },
     { name: "Web", enabled: props.webSearchEnabled, toggle: props.onWebSearchToggle, Icon: Globe, detail: "Search when needed. Queries leave this device." },
   ];
-  const active = tools.filter((tool) => tool.enabled).map((tool) => tool.name);
   return <div className="composer-tools">
     <div className="chat-tools" ref={root} onBlur={(event) => {
       if (!event.currentTarget.contains(event.relatedTarget as Node)) setOpen(false);
     }}>
-      <button type="button" className="composer-tool" ref={trigger} aria-expanded={open} aria-controls={id}
+      <button type="button" className="composer-tool" ref={trigger} aria-label="Tools" aria-expanded={open} aria-controls={open ? id : undefined}
         onClick={() => setOpen((value) => !value)}><SlidersHorizontal size={16} aria-hidden="true" /><span>Tools</span></button>
       {open && <section className="chat-tools-panel" id={id} aria-label="Chat tools">
         <h2>Context for this chat</h2>
@@ -56,8 +55,5 @@ export function ChatTools(props: Props) {
         </button>
       </section>}
     </div>
-    <span className="context-summary" title={active.join(", ") || "No added context"} aria-label={`Active context: ${active.join(", ") || "none"}`}>
-      {props.webSearchEnabled ? "Web on" : active.length > 1 ? `${active.length} sources of context` : active.length ? `${active[0]} on` : "No added context"}
-    </span>
   </div>;
 }

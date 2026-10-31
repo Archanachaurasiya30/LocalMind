@@ -2,11 +2,14 @@ import { Mic, Square, Volume2 } from "lucide-react";
 import type { useVoice } from "../hooks/useVoice";
 import "./voice.css";
 
-export function VoiceControls({ voice, disabled }: { voice: ReturnType<typeof useVoice>; disabled: boolean }) {
+export function VoiceControls({ voice, disabled, hideTrigger = false, panelId }: {
+  voice: ReturnType<typeof useVoice>; disabled: boolean; hideTrigger?: boolean; panelId?: string;
+}) {
   const active = voice.phase !== "idle";
+  if (hideTrigger && !voice.open && !active && !voice.error) return null;
   return <div className="voice-controls">
-    <button className="voice-toggle" type="button" aria-label="Voice controls" aria-expanded={voice.open}
-      onClick={() => voice.setOpen(!voice.open)}><Mic size={17} aria-hidden="true" /><span>Voice</span></button>
+    {!hideTrigger && <button className="voice-toggle" type="button" aria-label="Voice controls" aria-expanded={voice.open}
+      onClick={() => voice.setOpen(!voice.open)}><Mic size={17} aria-hidden="true" /><span>Voice</span></button>}
     <span className="voice-phase" role="status" aria-live="polite">
       {voice.phase === "permission" ? "Requesting microphone…" : voice.phase === "listening" ? "Listening" :
         voice.phase === "transcribing" ? "Transcribing on this device…" : voice.phase === "review" ? "Review your transcript" :
@@ -14,7 +17,7 @@ export function VoiceControls({ voice, disabled }: { voice: ReturnType<typeof us
     </span>
     {voice.phase === "listening" && <span className="voice-phase" aria-hidden="true">{voice.seconds}s / 30s</span>}
     {active && <button type="button" className="voice-toggle" onClick={() => voice.cancel()} aria-label="Interrupt voice turn"><Square size={14} />Stop voice</button>}
-    {voice.open && <section className="voice-panel" aria-label="Local voice controls">
+    {voice.open && <section className="voice-panel" id={panelId} aria-label="Local voice controls">
       {voice.status?.disabled_reason && <p role="status">{voice.status.disabled_reason}</p>}
       <div className="voice-fields">
         <label>Microphone<select value={voice.preferences.device} disabled={active} onChange={event => voice.updatePreferences({ device: event.target.value })}>
