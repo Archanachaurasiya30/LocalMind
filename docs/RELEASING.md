@@ -4,6 +4,24 @@ Update the version together in `apps/desktop/src-tauri/tauri.conf.json`,
 `apps/desktop/src-tauri/Cargo.toml`, and the `localmind-app` entry in `Cargo.lock`.
 Add `docs/releases/vX.Y.Z.md`. Do not replace an already published version.
 
+## Product walkthrough
+
+The README thumbnail opens the browser player at
+https://swarneil1905.github.io/LocalMind/, rather than a raw download URL.
+The `Product walkthrough` workflow publishes only `docs/watch/index.html`,
+the walkthrough MP4, poster, captions and brand icon. GitHub Pages must use
+GitHub Actions as its build source.
+
+When replacing the recording, use an isolated demo profile and real model
+responses. Update `docs/media/localmind-walkthrough.mp4`,
+`docs/media/localmind-preview.jpg`, and `docs/media/localmind-walkthrough.vtt`
+together. Keep the MP4 browser-compatible (H.264, yuv420p, fast-start metadata),
+check captions against the final edit, and verify play, seek and fullscreen
+on the published page. Do not record personal conversations or credentials.
+The walkthrough deployment and the installer release are independent checks.
+
+## Publish installers
+
 Push the changes to `main` and run the Release workflow with `publish=true`.
 The workflow checks the exact dispatched commit, runs all three CI workflows,
 then builds each platform on a matching native runner. `publish=false` runs the

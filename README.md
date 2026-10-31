@@ -4,221 +4,151 @@
 
 # LocalMind
 
-**A desktop workspace for local AI, your files, and the things you want to remember.**
+**Your models. Your files. Your workspace.**
 
-Chat with models running on your computer, search your documents, and keep conversations organized with projects and tasks. No LocalMind account or cloud AI subscription is required.
+LocalMind is a desktop app for chatting with local AI, exploring your documents, and keeping useful context close. Run it in a full workspace or keep a small, pinned chat beside what you are doing. No LocalMind account or cloud AI subscription is required for local chat.
 
-[Download](https://github.com/Swarneil1905/LocalMind/releases/latest) · [Demo](#see-it-in-action) · [Getting started](#getting-started) · [Development](#development) · [Report an issue](https://github.com/Swarneil1905/LocalMind/issues)
+[Download](https://github.com/Swarneil1905/LocalMind/releases/latest) · [Watch the walkthrough](https://swarneil1905.github.io/LocalMind/) · [Get started](#get-started) · [Development](#development) · [Report a bug](https://github.com/Swarneil1905/LocalMind/issues)
 
-[![CI Frontend](https://github.com/Swarneil1905/LocalMind/actions/workflows/ci-frontend.yml/badge.svg)](https://github.com/Swarneil1905/LocalMind/actions/workflows/ci-frontend.yml)
-[![CI Python](https://github.com/Swarneil1905/LocalMind/actions/workflows/ci-python.yml/badge.svg)](https://github.com/Swarneil1905/LocalMind/actions/workflows/ci-python.yml)
-[![CI Rust](https://github.com/Swarneil1905/LocalMind/actions/workflows/ci-rust.yml/badge.svg)](https://github.com/Swarneil1905/LocalMind/actions/workflows/ci-rust.yml)
+[![Frontend](https://github.com/Swarneil1905/LocalMind/actions/workflows/ci-frontend.yml/badge.svg)](https://github.com/Swarneil1905/LocalMind/actions/workflows/ci-frontend.yml)
+[![Python](https://github.com/Swarneil1905/LocalMind/actions/workflows/ci-python.yml/badge.svg)](https://github.com/Swarneil1905/LocalMind/actions/workflows/ci-python.yml)
+[![Rust](https://github.com/Swarneil1905/LocalMind/actions/workflows/ci-rust.yml/badge.svg)](https://github.com/Swarneil1905/LocalMind/actions/workflows/ci-rust.yml)
+[![Release](https://github.com/Swarneil1905/LocalMind/actions/workflows/release.yml/badge.svg)](https://github.com/Swarneil1905/LocalMind/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## See it in action
 
-[![LocalMind desktop walkthrough with live local model responses](docs/media/localmind-preview.gif)](https://github.com/Swarneil1905/LocalMind/raw/refs/heads/main/docs/media/localmind-walkthrough.mp4)
+[![Watch LocalMind in the full desktop window and mini chat](docs/media/localmind-preview.jpg)](https://swarneil1905.github.io/LocalMind/)
 
-**[Watch or download the full walkthrough (MP4, 1:59, 1.6 MB)](https://github.com/Swarneil1905/LocalMind/raw/refs/heads/main/docs/media/localmind-walkthrough.mp4)**
+**[Watch in your browser, with playback and fullscreen controls →](https://swarneil1905.github.io/LocalMind/)**
 
-A captioned recording of the Windows 0.7.1 release candidate: local chat, contextual follow-ups, the Tools menu, pinned mini chat, draft preservation when expanding, and light and dark themes. The answers are generated live by Qwen2.5 1.5B through Ollama in a separate demo workspace. Idle pauses are trimmed; this is a product walkthrough, not a performance benchmark.
+The captioned walkthrough shows the 0.8.0 desktop release candidate in a separate demo profile: full-window chat, live local-model responses, follow-up questions, model/context controls, and mini chat. The walkthrough is edited for length; model responses are shown as generated. Experimental features are identified rather than presented as validated production features.
 
 ## What you can do
 
-| Workspace | What it does |
+| Feature | In the app |
 | --- | --- |
-| **Chat** | Stream responses from local models, render equations and code, copy answers or code, stop a response, and retry. Reading earlier messages keeps your scroll position. |
-| **Mini chat** | Shrink the current conversation to a small, resizable desktop window. Pin it above other apps, minimize it, or expand it without losing the current draft or interrupting a response. |
-| **Sources** | Inspect web links and publication dates, or open local file citations to see the indexed passage and its PDF page or text lines. Changed and missing files are flagged. |
-| **Knowledge** | Assign folders to a project and search their text and meaning. Unassigned chats search unassigned sources. Text search remains available when embeddings fail; indexing shows partial results and offers retry. |
-| **Memory** | Review and remove facts extracted from conversations, including relationships between saved facts. |
-| **Projects and Tasks** | Group conversations by project. Ask chat to add a task, review its title and date, and confirm creation. Saved receipts make repeated confirmations safe. |
-| **Dependencies** | Capture selected text-file revisions, quote a supporting fact, and confirm which files or project tasks depend on it. Rescans show affected work. Review exact-value repair diffs, then apply accepted changes individually with backups and recovery receipts. File apply is a Windows pilot. |
-| **Connections** | Connect supported apps to bring their data into your workspace. Availability and setup depend on the service and operating system. |
-| **Media (source beta)** | Track optional local image jobs and reviewed Runway video jobs, including progress, recovery and export. Images remain an opt-in experiment; video uses your own paid API key and requires cost approval. |
-| **Settings** | Choose installed models, adjust context and supported thinking controls, restore previous response settings, configure web search, and switch themes. |
+| **Chat locally** | Stream responses through Ollama. Read formatted code, tables and equations; copy, stop or retry answers. |
+| **Choose your model** | Switch response presets from the composer; configure their models in Settings. Adjust context and supported thinking controls in Settings. |
+| **Keep a mini chat nearby** | Resize, pin, minimize or expand the current conversation without losing its draft. |
+| **Ask your documents** | Add folders to Knowledge, assign them to projects, and inspect cited passages with page or line locations. |
+| **Remember useful context** | Review and remove saved facts. New memories are scoped to a project or their originating conversation. |
+| **Organize work** | Group chats into projects and manage tasks. Chat-proposed tasks require review before creation. |
+| **Check online sources** | Turn Web on for source-dependent questions. Inspect links and available publication dates. |
+| **Track dependencies** | Record which files or tasks depend on a fact, rescan for changes, and review repair previews. File apply/restore is a Windows pilot with recovery receipts. |
+| **Explore media** | Review optional Runway video requests before upload and payment. Track jobs, recover known tasks and save verified outputs. Live provider acceptance is pending. |
 
-LocalMind is built for independent desktop installations. Each person has their own local workspace, models, and connections. There is no shared server or automatic conversation sync between devices.
+Light, dark and system themes use calm backgrounds, subtle spotlight surfaces and glass-style actions. Keyboard focus stays visible; reduced-motion preferences are respected.
 
-These features describe the current source branch; a published installer may not include the latest changes. New memories are scoped to their project, or to the originating conversation when no project is selected. Relevant legacy global memories remain available. Review and remove saved facts in Memory.
+LocalMind supports **independent desktop installations**. Each person has their own profile, models and connections. Shared accounts, hosted team workspaces and automatic device sync are not available.
 
 ## Install
 
-**[Open the latest published release](https://github.com/Swarneil1905/LocalMind/releases/latest)** and choose an installer from its assets.
+**[Open the latest release](https://github.com/Swarneil1905/LocalMind/releases/latest)** and choose your installer. This branch targets **0.8.0**; the release page is the source of truth for published installers. Read the [0.8.0 release notes](docs/releases/v0.8.0.md).
 
-This branch contains **0.7.1**. The latest published release may be older; the release page is the source of truth for available downloads. See the [0.7.1 release notes](docs/releases/v0.7.1.md) for the changes in this branch.
-
-The 0.7.1 release workflow builds these installers:
-
-| Computer | Installer |
+| Platform | Download |
 | --- | --- |
-| Windows x64 | `.exe` setup installer |
-| macOS Apple Silicon, macOS 14 or later | `_aarch64.dmg` |
-| macOS Intel, macOS 14 or later | `_x64.dmg` |
+| Windows x64 | `LocalMind_0.8.0_x64-setup.exe` |
+| macOS Apple Silicon, macOS 14+ | `LocalMind_0.8.0_aarch64.dmg` |
+| macOS Intel, macOS 14+ | `LocalMind_0.8.0_x64.dmg` |
 | Linux x64 | `.deb` or `.AppImage` |
 
-The 0.7.1 installers include the Python AI service and Ollama runtime. You do not need to install Python, Node.js, Rust, or Docker to use them. If Ollama is already running locally, LocalMind uses it.
+The installer includes the Python AI service and Ollama runtime. You do not need Python, Node.js, Rust or Docker to use the app. An existing local Ollama installation can be reused. **Model weights download separately.** Memory use, disk space and speed depend on your model and computer.
 
-Model weights are downloaded separately. Allow disk space for both the installer and your chosen models; memory requirements and response speed depend on the model and your hardware.
+Updater bundles are signed with LocalMind's update key. Windows installers are not Authenticode-signed and macOS apps are not Apple-notarized, so operating systems may display a security prompt. Release assets include `SHA256SUMS.txt`.
 
-Release assets include `SHA256SUMS.txt`. Update bundles are signed for LocalMind's updater; Windows installers are not Authenticode-signed and macOS apps are not Apple-notarized. Your operating system may display a security prompt.
+## Get started
 
-## Getting started
+1. **Finish model setup.** Download a model. Start with the compact option if memory is limited.
+2. **Ask a question.** Choose a response preset from the composer. Follow up in the same chat to keep context.
+3. **Add your documents.** In Knowledge, add a folder and assign its project. Enable Knowledge in the matching chat; open citations to inspect source passages.
+4. **Review Memory.** Keep useful facts and remove anything you do not want reused.
+5. **Use Web when needed.** Enable it from Tools. Online queries leave the device; local explanations do not require search.
 
-1. **Launch LocalMind and finish model setup.** The first-run screen shows download progress and lets you retry failed downloads. An internet connection is required to download models.
-2. **Choose a model and start a chat.** Settings lets you change which installed model each preset uses. Start with a smaller model if responses are slow.
-3. **Add your files in Knowledge.** Select their project, add a folder, and check its indexing status. Install `nomic-embed-text` for semantic search; exact-term search can work without embeddings. Enable Knowledge in the matching project chat, then open a `[K1]` citation to inspect its supporting passage.
-4. **Review Memory.** Check the facts saved from conversations and remove anything you do not want reused.
-5. **Enable web search when you need online information.** Choose DuckDuckGo or configure a SearXNG instance. LocalMind searches for source-dependent questions and answers ordinary explanations locally. Check the sources and their dates, especially for current events.
+| Default model | Purpose | Approximate download |
+| --- | --- | --- |
+| `qwen2.5:1.5b` | Speed preset and lightweight background work | 1 GB |
+| `qwen3:8b` | Balanced preset | 5.2 GB |
+| `nomic-embed-text` | Semantic document search | 274 MB |
 
-The setup screen currently offers these default models:
+Once models are installed, local chat and retrieval can work offline. Exact-text Knowledge search remains available when embeddings fail. Local models can still be incorrect, miss context or invent details. Check important claims and cited sources.
 
-| Model | Purpose |
+### Everyday controls
+
+- **Enter** sends; **Shift + Enter** adds a line break.
+- **Tools** toggles Memory, Knowledge and Web. Active context appears above the draft.
+- **Ctrl/Cmd + Shift + M** switches between full-window and mini chat while the app is focused.
+- **Ctrl/Cmd + Shift + O** starts a new chat.
+- Reading older messages keeps your position; **Latest response** returns to the current reply.
+
+## Optional and experimental features
+
+| Feature | Current boundary |
 | --- | --- |
-| `qwen2.5:1.5b` | Speed preset and background work such as memory extraction |
-| `qwen3:8b` | Balanced preset by default; this can be changed in Settings |
-| `nomic-embed-text` | Embeddings for Knowledge search |
+| **Local images** | Disabled by default after SSD-1B failed visual-quality review. Optional CUDA worker, separate runtime and approximately 4.16 GiB model download. No automatic paid fallback. |
+| **Runway video** | Your own API key, native credential storage and per-request upload/cost approval. Local $50 monthly reservation limit; unknown submissions are never silently retried. Real provider acceptance remains pending. |
+| **Voice** | Windows x64 English pilot: whisper.cpp transcription and installed system voices. Disabled by default pending human microphone/playback checks. Mac/Linux voice is not implemented. |
+| **Gmail** | Read-only access with OS-stored credentials and bounded snippet sync. Fresh authorization required; live-account acceptance pending. |
+| **MCP and plugins** | An explicitly enabled, owned MCP test server, built-in planner and synthetic repair recipe. No arbitrary third-party code or automatic chat tool execution. |
+| **WhatsApp / iMessage** | Unavailable pending provider acceptance. |
 
-Once models are installed, local chat and document retrieval can work offline. Web search, remote connections, model downloads, and update checks need their respective network services. Voice is not available in 0.7.1.
+Setup and limitations: [Media](docs/media.md) · [Voice](docs/voice.md) · [Connections and tools](docs/connections.md) · [Image research](docs/image-research.md).
 
-### Chat controls
+## Your data
 
-Open **Tools** beside the message field to turn Memory, Knowledge, or Web on and off. Enabled context appears above your draft, and the footer warns when web queries leave your device. These choices are locked while a response is running. Starter prompts fill in a draft for you to edit before sending.
+The desktop app talks to an authenticated local service on loopback. LocalMind has no built-in analytics or usage tracking.
 
-The model picker shows the configured local model and its **Speed** or **Balanced** preset. Open it to switch presets; change their models in Settings. The microphone button opens the existing voice controls, whose availability depends on the source-build pilot described below. Press **Enter** to send, **Shift+Enter** for a new line, or use **Stop** during a response.
-
-Choose **Mini chat** in the chat header, or press **Ctrl+Shift+M** on Windows/Linux (**Cmd+Shift+M** on macOS) while LocalMind is focused. This compacts the current window; it does not create a second conversation. Use **Stay on top** to keep it above other windows, **Minimize mini chat** to send it to the taskbar, and **Expand chat** to return to the previous window size. Expanding also turns pinning off. Leave full screen before entering mini chat. Closing the window exits the app as usual.
-
-## Tasks and project dependencies
-
-To create a task from chat, select its project in the chat header and ask, for example, **“Add a task called Review the launch draft, due 2026-11-18.”** LocalMind prepares a proposal using the local model. Check the destination, title and date, then choose **Create task**. A task is created only after confirmation; the card shows the saved task ID. Retrying the same confirmation returns the original receipt, even if the reply was lost. Dismissed proposals create nothing. Moving a chat to another project blocks its older pending requests.
-
-In **Projects → Dependencies**:
-
-1. Set the working folder in Overview and explicitly approve it for dependency tracking.
-2. Capture a source using its relative path, such as `notes/release.md`.
-3. Copy an exact quote from the captured source, explain the dependency, and choose a dependent text file or an existing task in that project.
-4. Inspect the proposal and confirm or reject the link.
-5. Choose **Rescan tracked files** after making edits. Changed sources or missing targets flag confirmed dependencies for review, with the original quote and reason still available.
-
-Dependency tracking supports UTF-8 `.md`, `.markdown` and `.txt` files up to 256 KiB, with up to 200 sources and 200 links per project. It reads only registered files within the approved folder and excludes linked paths. A changed hash signals a revision difference, not proof that a fact's meaning changed. Results reflect the last scan.
-
-After a source changes, **Prepare a repair preview** lets you specify an old value and its replacement, such as `2026-11-18` → `2026-11-25`. Both values must be verified against the captured and current source. LocalMind stages copies of confirmed dependent items, checks exact matches and unchanged target revisions, validates supported text/task constraints, and shows each before/after diff. Multiple matches, missing or modified targets, unsupported formats, and failed checks block that candidate. Markdown checks include balanced fenced code blocks; they do not prove semantic correctness.
-
-Accepting or rejecting individual proposals saves review choices only. **Apply this change** opens a separate confirmation for one accepted item. The service rechecks its source and original revision, saves a durable backup and journal entry, and records a write receipt. Repeating the request returns that receipt instead of repeating the update. Multi-item repairs are not one atomic transaction: inspect each item's receipt for progress.
-
-Local task updates and their journal records commit together in SQLite. File apply is enabled only on Windows, using handles that deny competing writes and deletes while the approved file is open. Mac/Linux file apply remains disabled because advisory locks cannot guarantee that another editor will cooperate. Set `LOCALMIND_REPAIR_APPLY=0` before launching the app to disable all apply/restore writes; previews and recovery checks remain available.
-
-**Check recovery** compares current content with the saved original and intended revision without modifying it. **Restore original** requires another confirmation and refuses to overwrite a later edit. If interrupted content matches neither revision, the receipt reports a conflict and requires manual recovery. Original bytes remain in the local `projects.db` repair journal, with the original staged copy under `repair-staging/<operation-id>/<item-id>.before`. Preserve this profile when recovering work; do not delete it or the project before recovery. File writes preserve the existing file and its permissions but are not atomic during a process or power failure, which is why backups are committed first.
-
-Repair previews and copies persist locally across restarts, with limits of 50 operations per project, 8 MiB of staged copies per operation, and 16 MiB of preview text per project. Captured source revisions stay fixed; automatic repair and accepting a new baseline revision are not implemented yet. A receipt reconciled as **not applied** or **restored** cannot be reused to apply again; prepare a new preview.
-
-Task extraction uses [Ollama's structured output format](https://ollama.com/blog/structured-outputs), followed by local validation and explicit review. Model output can still be wrong, so review the proposal rather than treating its wording as a completed action.
-
-## Local voice pilot (source build)
-
-Voice is **disabled by default in the source beta** pending human microphone/playback checks and ten multi-turn sessions. The Voice page explains this state, and recording, synthesis and installation requests are blocked. Developers can explicitly set `LOCALMIND_VOICE_PILOT=1` before launching a source build to continue testing the Windows x64 English pilot. This does not mean the beta gate has passed.
-
-With that opt-in, open **Voice** in the sidebar to download the verified whisper.cpp runtime and `base.en` weights (about 157 MB). Audio transcription runs on the CPU; spoken replies use an installed Windows stock voice. No paid speech API is needed. These features are newer than the published 0.7.1 release.
-
-In chat, open **Voice**, choose your microphone and optionally a reply voice, then use **Start recording** or **Hold to talk**. Record up to 30 seconds, review and edit the transcript, and choose **Add to message**. It preserves existing draft text and does not send automatically. **Stop voice** interrupts generation and playback. Ctrl/⌘ + Shift + V starts or finishes recording; Escape stops voice.
-
-Raw audio stays on this device and temporary capture files are removed. Sent transcripts follow the normal chat settings, including any enabled web search or connectors. Mac/Linux voice, hands-free conversation, and broader language support are not implemented yet. See the [voice guide](docs/voice.md) for setup, architecture, benchmark commands, and the human microphone acceptance checklist.
-
-Developers can run `python scripts/evaluation/workspace_repair_gate.py` for ten isolated repair journeys. Its JSON evidence stays under ignored `artifacts/evaluation/`. The Windows Python CI job checks exclusive handles and real process interruptions; the full service suite also checks knowledge isolation and task creation.
-
-## Connections and local tools (source beta)
-
-Gmail now requests only **read-only Gmail access**, keeps tokens in the OS credential store, and syncs at most 100 snippets from the last 30 days per run. Existing Gmail connections need fresh authorization; old plaintext tokens are not reused or migrated. Locked credential storage, offline sync, expired authorization and incomplete revocation are shown in Connections. Disconnect stops future reads; previously synced data remains locally. This path has been validated with synthetic provider fixtures, not a consented live Gmail account.
-
-**Connections → Local tools** previews an owned MCP test server's executable, arguments, tools and scope. Explicitly enable it to read a built-in sample or test waiting/cancellation. It cannot read your files, write files, send mail or install other servers. Closing Connections or stopping the server ends its process; restart requires fresh approval. Chat does not invoke MCP tools automatically. See [connection and tool boundaries](docs/connections.md) for setup, limitations and test commands.
-
-Connections also includes a **Local planner** that validates a short task list without saving it, and a **Repair recipe** you can export and import to test the existing repair logic on synthetic copies. These built-in extensions declare their permissions; arbitrary plugin code and third-party recipe imports are not supported. WhatsApp and iMessage remain disabled pending provider acceptance. Status and permission details explain these limits before enablement.
-
-The source branch includes a **Media** workspace for optional local images and Runway image-to-video. The image pilot is **disabled by default** because the earlier visual-quality trial did not pass. Its CUDA runtime and approximately 4.16 GiB of weights are optional and excluded from the installer. Video requires your own API key, an exact input review and explicit cost approval; known tasks resume after restart without another submission. See the [Media setup and recovery guide](docs/media.md) and [image research evidence](docs/image-research.md). Live provider and new-worker acceptance trials remain pending.
-
-## Data and privacy
-
-Model inference runs through Ollama on this computer. The AI service listens on loopback and requires a fresh token supplied by the desktop app for each launch.
-
-| Data or activity | Where it goes |
+| Activity | Destination |
 | --- | --- |
-| Conversations, memories, projects, and tasks | Local SQLite databases in your profile |
-| Indexed documents | Local text/index data in SQLite and LanceDB |
-| Web-assisted questions | Search queries, which can include context from follow-up questions, go to the selected search provider; LocalMind also fetches result pages |
-| Saved web sources | Source links and available metadata stay with the local conversation |
-| Connected apps | Authentication and sync communicate with the connected service; downloaded data and session credentials are stored locally |
-| Model downloads | Ollama contacts the model registry |
-| Update checks and downloads | The updater contacts GitHub Releases |
+| Local chat, memory, projects and tasks | Your device; SQLite profile databases |
+| Document indexing and retrieval | Your device; SQLite and LanceDB |
+| Web search | Search provider and retrieved websites; queries may include follow-up context |
+| Connected services | The service you authorize; downloaded data remains in your profile |
+| Runway video | Reviewed image and prompt go to Runway only after confirmation |
+| Model/runtime downloads | Ollama or the documented model/runtime host |
+| Update checks | GitHub Releases |
 
-LocalMind has no built-in analytics or usage tracking. Local workspace databases are protected by your OS account permissions, not by application-level encryption. The source beta stores new Gmail credentials in the native OS credential store; old plaintext credentials are not reused. People using the same OS account share its default profile.
+Gmail and Runway credentials use the native OS credential store with no plaintext fallback. Workspace databases are protected by OS account permissions, **not application-level encryption**. People sharing an OS account share its default profile.
 
-| Platform | Default profile directory |
+| Platform | Default data directory |
 | --- | --- |
 | Windows | `%APPDATA%\LocalMind` |
 | macOS | `~/Library/Application Support/LocalMind` |
 | Linux | `$XDG_DATA_HOME/LocalMind`, or `~/.local/share/LocalMind` |
 
-Ollama manages its model storage separately. See [desktop runtime and storage](docs/DESKTOP_RUNTIME.md) for process isolation, profile migration, and developer overrides.
+Ollama stores models separately. See [desktop runtime and storage](docs/DESKTOP_RUNTIME.md) before moving or backing up a profile.
 
 ## Troubleshooting
 
-| Symptom | What to check |
+| Problem | Next step |
 | --- | --- |
-| The local AI service does not start | Use the app's retry control after the failure. Close another LocalMind instance using the same profile; only one service can own it. |
-| A chat model is unavailable | Finish its download or choose an installed model in Settings. Source development also requires a running local Ollama service. |
-| Knowledge shows a partial or empty index | Read its status message. Check file permissions and UTF-8 text encoding; PDFs must contain selectable text. Install `nomic-embed-text` for semantic search, then choose Retry indexing. |
-| A local citation says the file changed or is missing | The preview is the saved indexed passage. Restore the original file or re-add its new folder; retry indexing to update changed content. Older chat citations may become unavailable after reindexing. |
-| A current-news question has no answer | Verify web search is enabled. LocalMind reports when it cannot retrieve suitable dated sources; try a more specific query. |
-| Responses are slow | Try a smaller installed model, disable expanded Knowledge search, or turn thinking off in response settings when the model supports it. |
+| AI service will not start | Use Retry. Close another LocalMind instance using the same profile. |
+| Model unavailable or responses slow | Complete its download or select a smaller model. Check memory and supported thinking settings. |
+| Knowledge is incomplete | Inspect indexing status and permissions, then retry. PDFs need selectable text; OCR and automatic file watching are not implemented. |
+| Source changed or disappeared | Citations show indexed passages. Reindex to refresh; older citations may no longer resolve afterward. |
+| Current information cannot be verified | Enable Web and use a more specific query. Missing dated evidence should be reported, not invented. |
+| Media task is paused or unknown | Follow its receipt. Resume only a known provider task; check Runway before replacing an unknown submission. |
 
-For a bug report, include the app version, operating system, model name, steps to reproduce, and relevant errors. Remove private conversation content and credentials before posting to [Issues](https://github.com/Swarneil1905/LocalMind/issues). Report security vulnerabilities using [SECURITY.md](SECURITY.md).
+Knowledge supports UTF-8 text/code and selectable-text PDFs, up to 10 MiB per file, 500 pages per PDF, 2,000 supported files and 20,000 passages per folder. Hidden and common build folders are skipped.
 
-Knowledge supports UTF-8 text and code files and PDFs with selectable text, up to 10 MiB per file, 500 pages per PDF, 2,000 supported files and 20,000 passages per folder. It does not perform OCR or watch files for changes automatically. Hidden folders and common build directories are skipped. Retry indexing after editing files. Legacy indexes remain searchable; reindex them to add verified page or line locations.
+For [bug reports](https://github.com/Swarneil1905/LocalMind/issues), include version, OS, model, steps and relevant errors. Remove private content and credentials. Use [SECURITY.md](SECURITY.md) for vulnerabilities.
 
 ## Development
 
-The repository uses **Node.js 22**, **pnpm 11.0.9**, **Python 3.11**, and **Rust stable**, matching CI. Native development also needs the [Tauri platform prerequisites](https://v2.tauri.app/start/prerequisites/) and a running local Ollama service.
-
-See the [desktop development guide](apps/desktop/README.md) for virtual-environment setup, first-build preparation, and validation commands. Docker is not required for development or the release workflow.
+The stack is React/TypeScript, Tauri/Rust, Python/FastAPI, SQLite/LanceDB and Ollama. CI uses **Node.js 22, pnpm 11.0.9, Python 3.11 and Rust stable**. Native builds need the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/). Start with the [desktop development guide](apps/desktop/README.md). Docker is not required.
 
 | Directory | Responsibility |
 | --- | --- |
-| `apps/desktop/src` | React and TypeScript interface |
-| `apps/desktop/src-tauri` | Rust desktop commands, lifecycle, and native packaging |
-| `crates/` | Shared Rust runtime, database, and permission crates |
-| `services/ai` | Python/FastAPI service, retrieval, memory, and connections |
-| `scripts/release` | Runtime staging, packaging, smoke checks, and release validation |
-| `scripts/evaluation` | Reproducible conversation replays, dataset preparation, and installed-model comparisons |
-| `.github/workflows` | Frontend, Python, Rust, and native release workflows |
+| `apps/desktop/src` | Interface and frontend tests |
+| `apps/desktop/src-tauri`, `crates/` | Native commands, lifecycle, permissions and runtime |
+| `services/ai` | Inference orchestration, retrieval, persistence and service tests |
+| `scripts/media` | Optional isolated image worker |
+| `scripts/release` | Packaging, payload checks, signatures and publication |
+| `scripts/evaluation`, `evaluation/` | Conversation and model evaluation |
+| `docs/watch` | Browser video player published through GitHub Pages |
 
-```mermaid
-flowchart LR
-    UI[React desktop UI] <-->|Tauri commands and events| Rust[Rust desktop process]
-    Rust <-->|Authenticated loopback HTTP| AI[Python AI service]
-    AI <--> DB[(SQLite and LanceDB)]
-    AI <-->|Local inference| Ollama[Ollama]
-    AI <-->|Optional search and connections| Web[External services]
-```
+Frontend, Python and Rust checks run on `main` and pull requests. Releases repeat those checks, build on native Windows/macOS/Linux runners, test installer payloads and verify assets before publication. See [Releasing LocalMind](docs/RELEASING.md).
 
-Rust owns service startup, readiness, cancellation, and recovery. Python owns retrieval and persistence. Request-scoped streaming keeps replies attached to the conversation that started them.
+Evaluation examples and replay runs do **not** train the model. See [conversation evaluation](evaluation/README.md) and [dataset preparation](evaluation/DATASETS.md). Local working notes, datasets and experiment reports stay outside tracked source.
 
-See [conversation evaluation](evaluation/README.md) and [dataset preparation](evaluation/DATASETS.md) for reproducible checks. Downloaded conversations, model outputs, and working notes stay in ignored local artifacts. Importing examples or replaying them does not train the model.
-
-### Checks and releases
-
-The frontend, Python, and Rust workflows run on pushes to `main` and pull requests targeting `main`. They check types, lint, tests, builds, and release tooling. The Release workflow runs these checks again, builds on native runners, tests packaged service payloads, and verifies assets before publication.
-
-Release preparation, signing, build-only runs, and failure recovery are documented in [Releasing LocalMind](docs/RELEASING.md). A failed release build does not make a new version available for download.
-
-## Further reading
-
-- [Product evaluation](evaluation/README.md): replay synthetic conversations against an installed local model, capture replies and timings, and review behavior with a fixed rubric.
-- [Chat reliability](docs/CHAT_RELIABILITY.md): request handling, search freshness, and source persistence.
-- [Desktop runtime](docs/DESKTOP_RUNTIME.md): per-user storage and service lifecycle.
-- [Product design](docs/PRODUCT_REDESIGN.md): interface decisions and workspace behavior.
-- [Releasing](docs/RELEASING.md): native packaging and publication.
-
-## License
-
-LocalMind is released under the [MIT License](LICENSE). Bundled dependencies and downloaded models retain their own licenses.
+LocalMind uses the [MIT License](LICENSE). Dependencies and downloaded models retain their own licenses.

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Watch LocalMind in action: local AI chat, a full desktop workspace, and a compact mini chat.">
+  <title>LocalMind · Watch the walkthrough</title>
+  <style>
+    :root{color-scheme:light dark;--bg:#f4f6f5;--ink:#203b45;--muted:#536a72;--panel:#fff;--line:#d7e2e2;--accent:#205569}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,sans-serif}main{max-width:1180px;margin:auto;padding:28px 24px 64px}nav{display:flex;align-items:center;gap:24px;flex-wrap:wrap}a{color:var(--accent);text-underline-offset:4px}a:focus-visible,button:focus-visible{outline:3px solid #369cb5;outline-offset:4px}.brand{display:flex;align-items:center;gap:10px;margin-right:auto;font-weight:700;text-decoration:none}.brand img{width:36px;height:36px}h1{font-size:clamp(32px,5vw,58px);line-height:1.13;letter-spacing:-.04em;margin:64px 0 18px}p{max-width:770px;color:var(--muted)}.stage{margin-top:32px;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--panel);box-shadow:0 14px 48px #173b4910}video{display:block;width:100%;max-height:82vh;background:#101c23}video:fullscreen{max-height:none;height:100%;object-fit:contain}.controls{display:flex;gap:12px;padding:16px;align-items:center;flex-wrap:wrap}button{font:inherit;border:1px solid var(--line);border-radius:10px;padding:8px 16px;background:var(--bg);color:var(--ink);cursor:pointer}#status{font-size:14px;color:var(--muted)}.note{font-size:14px;margin-top:20px}.pill{display:inline-block;padding:4px 10px;border-radius:20px;background:var(--panel);border:1px solid var(--line);font-size:13px;margin-top:12px}footer{margin-top:40px;border-top:1px solid var(--line);padding-top:20px;font-size:14px;color:var(--muted)}
+    @media(prefers-color-scheme:dark){:root{--bg:#111c23;--ink:#e4eeec;--muted:#a5b9be;--panel:#192a33;--line:#30444e;--accent:#a6d3df}}@media(max-width:600px){main{padding:20px 14px 40px}nav{gap:14px}h1{margin-top:40px}.controls{padding:12px}}
+  </style>
+</head>
+<body>
+<main>
+  <nav aria-label="Main"><a class="brand" href="https://github.com/Swarneil1905/LocalMind"><img src="media/localmind-mark-256.png" alt="">LocalMind</a><a href="https://github.com/Swarneil1905/LocalMind#readme">Project guide</a><a href="https://github.com/Swarneil1905/LocalMind/releases/latest">Download</a></nav>
+  <h1>A little more room to think.</h1>
+  <p>Meet LocalMind in the full desktop workspace, then take the same conversation into mini chat. Watch here, or use fullscreen for a closer look.</p>
+  <span class="pill">v0.8.0 · Windows desktop walkthrough</span>
+  <section class="stage" aria-label="Product walkthrough">
+    <video id="walkthrough" controls playsinline preload="metadata" poster="media/localmind-preview.jpg">
+      <source src="media/localmind-walkthrough.mp4" type="video/mp4">
+      <track kind="captions" src="media/localmind-walkthrough.vtt" srclang="en" label="English">
+      Your browser does not support this video. <a href="media/localmind-walkthrough.mp4">Open the video</a>.
+    </video>
+    <div class="controls"><button id="play" type="button">Play walkthrough</button><button id="fullscreen" type="button">Fullscreen</button><span id="status" role="status" aria-live="polite">Captions available · no audio required</span></div>
+  </section>
+  <p class="note">Recorded in a separate demo profile with a local Ollama model. The app and responses are real; pauses between interactions are shortened. Use the player controls to pause, seek, or show captions.</p>
+  <footer>Local chat runs on your device. Web search and connected providers send data only when used. Voice and image generation remain experimental; video generation requires a supported provider and your approval.</footer>
+</main>
+<script>
+  const video=document.getElementById('walkthrough'),play=document.getElementById('play'),status=document.getElementById('status');
+  play.addEventListener('click',async()=>{try{if(video.paused)await video.play();else video.pause()}catch{status.textContent='Use the built-in play control to start the video.'}});
+  video.addEventListener('play',()=>{play.textContent='Pause walkthrough'});
+  video.addEventListener('pause',()=>{play.textContent='Play walkthrough'});
+  video.addEventListener('error',()=>{status.textContent='The video could not load. Please reload the page or try another browser.'});
+  document.getElementById('fullscreen').addEventListener('click',async()=>{try{if(video.requestFullscreen)await video.requestFullscreen();else if(video.webkitEnterFullscreen)video.webkitEnterFullscreen();else status.textContent='Use the fullscreen control in the video player.'}catch{status.textContent='Use the fullscreen control in the video player.'}});
+</script>
+</body>
+</html>

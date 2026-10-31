@@ -1,0 +1,47 @@
+name: Product walkthrough
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/watch/**'
+      - 'docs/media/**'
+      - 'apps/desktop/public/brand/localmind-mark-256.png'
+      - '.github/workflows/walkthrough.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: product-walkthrough-pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Prepare viewing page
+        run: |
+          mkdir -p _site/media
+          cp docs/watch/index.html _site/index.html
+          cp docs/media/localmind-walkthrough.mp4 _site/media/
+          cp docs/media/localmind-preview.jpg _site/media/
+          cp docs/media/localmind-walkthrough.vtt _site/media/
+          cp apps/desktop/public/brand/localmind-mark-256.png _site/media/
+          test -s _site/media/localmind-walkthrough.mp4
+          test -s _site/media/localmind-preview.jpg
+          test -s _site/media/localmind-walkthrough.vtt
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - uses: actions/deploy-pages@v4
+        id: deployment
