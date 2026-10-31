@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   X,
   AudioLines,
+  Film,
 } from "lucide-react";
 import { Brand } from "./components/Brand";
 import { ChatStarters } from "./components/ChatStarters";
@@ -37,6 +38,7 @@ import { ProjectsPage } from "./components/ProjectsPage";
 import { KnowledgePage } from "./components/KnowledgePage";
 import { TasksPage } from "./components/TasksPage";
 import { SettingsPage } from "./components/SettingsPage";
+import { MediaPage } from "./components/MediaPage";
 import { useChat } from "./hooks/useChat";
 import { useConversations } from "./hooks/useConversations";
 import { useMemory } from "./hooks/useMemory";
@@ -47,6 +49,7 @@ import { MODEL_MAP } from "./types";
 import type { ModelMode, WebSource } from "./types";
 import "./App.css";
 import "./workspace-design.css";
+import "./calm-surfaces.css";
 
 type PageId =
   | "today"
@@ -57,6 +60,7 @@ type PageId =
   | "projects"
   | "tasks"
   | "buddy"
+  | "media"
   | "settings";
 type Theme = "light" | "dark" | "system";
 const NAV = [
@@ -66,6 +70,7 @@ const NAV = [
   { id: "mind", label: "Memory", Icon: Brain },
   { id: "projects", label: "Projects", Icon: FolderOpen },
   { id: "tasks", label: "Tasks", Icon: CheckSquare },
+  { id: "media", label: "Media", Icon: Film },
 ] as const;
 const EMBED_MODEL = "nomic-embed-text";
 
@@ -608,7 +613,7 @@ export default function App() {
               )}
               <span className="local-label">
                 <ShieldCheck size={14} />
-                On this device
+                {activePage === "media" ? "Local + optional cloud" : "On this device"}
               </span>
             </div>
           </header>
@@ -660,9 +665,9 @@ export default function App() {
                 />
               ) : (
                 <div className="chat-welcome">
-                  <div className="welcome-identity"><span className="welcome-rule" />A little space for your next big idea</div>
-                  <h2>Good things start<br />with <em>a conversation.</em></h2>
-                  <p>Think it through. Make something. Find your next step.</p>
+                  <div className="welcome-identity"><Brand size={24} /><span>Your local workspace</span></div>
+                  <h2>What’s on your mind?</h2>
+                  <p>A question, a rough idea, a fresh start. Make it yours.</p>
                 </div>
               )}
               {!miniActive && activeId && !loadingConversation && !chatLoadError && <TaskActions key={`tasks-${activeId}`} conversationId={activeId} projectId={chatProjectId} isStreaming={isStreaming} onOpenTasks={() => navigate("tasks")} />}
@@ -736,6 +741,7 @@ export default function App() {
                 modelMode={modelMode}
                 onModelModeChange={setModelMode}
                 modelName={selectedModel}
+                modelNames={{ speed: speedModel, balanced: balancedModel }}
                 onOpenKnowledge={() => navigate("knowledge")}
               />
               {messages.length === 0 && !loadingConversation && !chatLoadError && !miniActive && <ChatStarters onChoose={openPrompt} />}
@@ -761,6 +767,8 @@ export default function App() {
             <ProjectsPage speedModel={speedModel} />
           ) : activePage === "tasks" ? (
             <TasksPage projects={projects} />
+          ) : activePage === "media" ? (
+            <MediaPage />
           ) : activePage === "connections" ? (
             <ConnectionsPage />
           ) : activePage === "buddy" ? (

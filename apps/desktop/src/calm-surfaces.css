@@ -1,0 +1,107 @@
+/* Quiet ambient color and original glass/spotlight treatments. No remote assets. */
+:root {
+  --ambient-sage: #527b6926;
+  --ambient-blue: #526e8820;
+  --ambient-warm: #7975580d;
+  --glass-fill: #26383fd9;
+  --glass-edge: #9bbfb94d;
+  --glass-shine: #e3fff421;
+  --glass-shadow: #020d1433;
+  --spotlight-tint: #aad9c32e;
+  --composer-fill: #1c282fe8;
+}
+.light {
+  --ambient-sage: #abcdb647;
+  --ambient-blue: #b6cddc36;
+  --ambient-warm: #e9d9b526;
+  --glass-fill: #f8fcf7d9;
+  --glass-edge: #b3c9bd;
+  --glass-shine: #ffffffd9;
+  --glass-shadow: #29443812;
+  --spotlight-tint: #7cae9140;
+  --composer-fill: #fcfdfbe8;
+}
+
+.app-main {
+  background:
+    radial-gradient(ellipse at 12% 0%, var(--ambient-sage), transparent 55%),
+    radial-gradient(ellipse at 100% 75%, var(--ambient-blue), transparent 60%),
+    radial-gradient(ellipse at 45% 100%, var(--ambient-warm), transparent 50%),
+    var(--bg);
+}
+.app-sidebar { background: linear-gradient(170deg, var(--ambient-sage), transparent 60%), var(--sidebar); }
+.composer-box {
+  background: var(--composer-fill);
+  border-color: var(--glass-edge);
+  box-shadow: inset 0 1px 0 var(--glass-shine), 0 8px 32px var(--glass-shadow);
+}
+.composer-box:focus-within { border-color: var(--link); box-shadow: inset 0 1px 0 var(--glass-shine), 0 0 0 3px var(--accent-dim), 0 8px 32px var(--glass-shadow); }
+.message-user { background: var(--surface-2); }
+
+/* Keep menus and transcript controls above the decorative layer. */
+.spotlight-surface { position: relative; isolation: isolate; }
+.spotlight-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(240px circle at var(--spotlight-x, 50%) var(--spotlight-y, 50%), var(--spotlight-tint), transparent 75%);
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+.spotlight-surface[data-spotlight-active="true"]::before,
+.spotlight-surface:focus-visible::before { opacity: 1; }
+.starter-prompts .spotlight-surface { background-color: var(--glass-fill); border-color: var(--glass-edge); box-shadow: inset 0 1px 0 var(--glass-shine), 0 3px 10px var(--glass-shadow); }
+.starter-prompts .spotlight-surface:hover { background-color: var(--glass-fill); border-color: var(--link); }
+
+/* Shared glass finish on actions; navigation rows and destructive actions retain their hierarchy. */
+.app-shell :is(.new-chat-button, .mini-launch, .page-button:not(.danger), .composer-tool, .model-picker-trigger, .composer-voice, .send-button, .jump-latest) {
+  border: 1px solid var(--glass-edge);
+  background: linear-gradient(165deg, var(--glass-shine), transparent 48%), var(--glass-fill);
+  color: var(--text);
+  box-shadow: inset 0 1px 0 var(--glass-shine), inset 0 -1px 1px var(--glass-shadow), 0 3px 9px var(--glass-shadow);
+  -webkit-backdrop-filter: blur(12px) saturate(115%);
+  backdrop-filter: blur(12px) saturate(115%);
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+.app-shell :is(.new-chat-button, .mini-launch, .page-button:not(.danger), .composer-tool, .model-picker-trigger, .composer-voice, .send-button, .jump-latest):hover:not(:disabled) {
+  border-color: var(--link);
+  box-shadow: inset 0 1px 0 var(--glass-shine), 0 4px 14px var(--glass-shadow);
+}
+.app-shell :is(.new-chat-button, .page-button.primary, .send-button:not(.stop-button)):not(:disabled) {
+  background: linear-gradient(155deg, var(--glass-shine), transparent 65%), var(--accent);
+  color: var(--on-accent);
+}
+.app-shell :is(.composer-tool, .model-picker-trigger, .composer-voice)[aria-expanded="true"] {
+  border-color: var(--link);
+  background-color: var(--accent-dim);
+}
+.app-shell .stop-button { background-color: var(--surface-3); color: var(--text); }
+.app-shell :is(.new-chat-button, .mini-launch, .page-button:not(.danger), .composer-tool, .model-picker-trigger, .composer-voice, .send-button, .jump-latest):active:not(:disabled) {
+  box-shadow: inset 0 2px 4px var(--glass-shadow), inset 0 1px 0 var(--glass-shine);
+}
+.app-shell :is(.send-button, .page-button, .model-picker-trigger):disabled { box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.app-shell .send-button:disabled { background: var(--surface-2); color: var(--text-3); opacity: .6; }
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .app-shell :is(.mini-launch, .page-button:not(.primary):not(.danger), .composer-tool, .model-picker-trigger, .composer-voice, .jump-latest) { background-color: var(--surface); }
+}
+@media (prefers-reduced-motion: reduce), (hover: none) {
+  .spotlight-surface::before { display: none; }
+  .app-shell button { transition: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .app-main, .app-sidebar { background: var(--bg); }
+  .composer-box { background: var(--surface); }
+  .spotlight-surface::before { display: none; }
+  .app-shell button { backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .app-shell :is(.mini-launch, .page-button:not(.primary):not(.danger), .composer-tool, .model-picker-trigger, .composer-voice, .jump-latest),
+  .starter-prompts .spotlight-surface { background: var(--surface); }
+}
+@media (forced-colors: active) {
+  .app-main, .app-sidebar { background: Canvas; }
+  .spotlight-surface::before { display: none; }
+  .app-shell button { backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none; }
+}

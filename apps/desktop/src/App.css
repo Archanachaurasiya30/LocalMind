@@ -1,7 +1,8 @@
 .app-shell {
   display: flex;
   height: 100dvh;
-  overflow: hidden;
+  /* Only the transcript and page panels scroll, never the window shell on focus. */
+  overflow: clip;
 }
 .brand-mark {
   border-radius: 0;
