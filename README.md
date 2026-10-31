@@ -35,6 +35,7 @@ A captioned recording of the Windows 0.7.1 release candidate: local chat, contex
 | **Projects and Tasks** | Group conversations by project. Ask chat to add a task, review its title and date, and confirm creation. Saved receipts make repeated confirmations safe. |
 | **Dependencies** | Capture selected text-file revisions, quote a supporting fact, and confirm which files or project tasks depend on it. Rescans show affected work. Review exact-value repair diffs, then apply accepted changes individually with backups and recovery receipts. File apply is a Windows pilot. |
 | **Connections** | Connect supported apps to bring their data into your workspace. Availability and setup depend on the service and operating system. |
+| **Media (source beta)** | Track optional local image jobs and reviewed Runway video jobs, including progress, recovery and export. Images remain an opt-in experiment; video uses your own paid API key and requires cost approval. |
 | **Settings** | Choose installed models, adjust context and supported thinking controls, restore previous response settings, configure web search, and switch themes. |
 
 LocalMind is built for independent desktop installations. Each person has their own local workspace, models, and connections. There is no shared server or automatic conversation sync between devices.
@@ -82,7 +83,9 @@ Once models are installed, local chat and document retrieval can work offline. W
 
 ### Chat controls
 
-Open **Tools** beside the message field to turn Memory, Knowledge, or Web on and off. These choices are locked while a response is running. Starter cards fill in a draft for you to edit before sending.
+Open **Tools** beside the message field to turn Memory, Knowledge, or Web on and off. Enabled context appears above your draft, and the footer warns when web queries leave your device. These choices are locked while a response is running. Starter prompts fill in a draft for you to edit before sending.
+
+The model picker shows the configured local model and its **Speed** or **Balanced** preset. Open it to switch presets; change their models in Settings. The microphone button opens the existing voice controls, whose availability depends on the source-build pilot described below. Press **Enter** to send, **Shift+Enter** for a new line, or use **Stop** during a response.
 
 Choose **Mini chat** in the chat header, or press **Ctrl+Shift+M** on Windows/Linux (**Cmd+Shift+M** on macOS) while LocalMind is focused. This compacts the current window; it does not create a second conversation. Use **Stay on top** to keep it above other windows, **Minimize mini chat** to send it to the taskbar, and **Expand chat** to return to the previous window size. Expanding also turns pinning off. Leave full screen before entering mini chat. Closing the window exits the app as usual.
 
@@ -132,7 +135,7 @@ Gmail now requests only **read-only Gmail access**, keeps tokens in the OS crede
 
 Connections also includes a **Local planner** that validates a short task list without saving it, and a **Repair recipe** you can export and import to test the existing repair logic on synthetic copies. These built-in extensions declare their permissions; arbitrary plugin code and third-party recipe imports are not supported. WhatsApp and iMessage remain disabled pending provider acceptance. Status and permission details explain these limits before enablement.
 
-Local image generation is being evaluated separately and is **not installed or enabled in the app**. The [image research guide](docs/image-research.md) describes the pinned model, ten fixed prompts, hardware limits and reproducible benchmark. Research dependencies and weights are excluded from the desktop installer.
+The source branch includes a **Media** workspace for optional local images and Runway image-to-video. The image pilot is **disabled by default** because the earlier visual-quality trial did not pass. Its CUDA runtime and approximately 4.16 GiB of weights are optional and excluded from the installer. Video requires your own API key, an exact input review and explicit cost approval; known tasks resume after restart without another submission. See the [Media setup and recovery guide](docs/media.md) and [image research evidence](docs/image-research.md). Live provider and new-worker acceptance trials remain pending.
 
 ## Data and privacy
 

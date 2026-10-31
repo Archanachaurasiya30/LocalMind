@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
-from app import plugins, recipes
+from app import plugins, recipes, media
 
 router = APIRouter(prefix="/extensions", tags=["extensions"])
 
@@ -35,10 +35,12 @@ def execute(function, *args):
 
 @router.get("/status")
 def status():
+    images = media.image_status()
     return {"planner": plugins.status(), "recipe": recipes.status(), "images": {
-        "status": "not-installed", "available": False, "location": "local", "permissions": [],
-        "reason": "Image generation is a separate hardware research trial. No image worker is installed in this beta.",
-        "evidence": "A separate ten-prompt hardware trial is defined. Research results do not enable image generation in this app."}}
+        "status": "experimental" if images["runtime_ready"] else "not-installed",
+        "available": False, "location": "local", "permissions": [],
+        "reason": images["reason"] + " Optional setup and jobs are in Media.",
+        "evidence": "Ten-image hardware trial passed; visual quality did not. The image pilot remains opt-in."}}
 
 
 @router.post("/planner-state")

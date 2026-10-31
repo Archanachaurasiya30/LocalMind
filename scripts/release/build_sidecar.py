@@ -59,6 +59,8 @@ def build(target: str) -> Path:
             "--workpath", str(scratch / "work"),
             "--specpath", str(scratch),
             "--paths", str(service),
+            # Only the small worker source ships; CUDA dependencies and weights stay optional.
+            "--add-data", f"{ROOT / 'scripts/media/image_worker.py'}{os.pathsep}media-worker",
             "--collect-submodules", "app",
             # Uvicorn selects its loop/protocol/lifespan implementations by name.
             "--collect-submodules", "uvicorn",

@@ -1374,6 +1374,75 @@ async fn reviewed_request(
 }
 
 #[tauri::command]
+async fn media_request(
+    operation: String,
+    payload: Option<serde_json::Value>,
+    sidecar_state: tauri::State<'_, SidecarState>,
+) -> Result<serde_json::Value, String> {
+    if !matches!(operation.as_str(), "status" | "credential" | "prepare" | "submit" | "resume" | "cancel" | "image" | "install" | "preview") {
+        return Err("Unknown media operation".into());
+    }
+    if payload.as_ref().is_some_and(|body| body.to_string().len() > 4_710_000) {
+        return Err("Media request is too large".into());
+    }
+    let body = if operation == "status" { None } else { Some(payload.unwrap_or_else(|| serde_json::json!({}))) };
+    reviewed_request(&sidecar_state, &format!("/media/{operation}"), body).await
+}
+
+#[tauri::command]
+async fn export_media(
+    job_id: String,
+    kind: String,
+    app_handle: tauri::AppHandle,
+    sidecar_state: tauri::State<'_, SidecarState>,
+) -> Result<bool, String> {
+    let id = knowledge_id(&job_id).map_err(|_| "Invalid media job ID")?;
+    let (extension, mime) = match kind.as_str() {
+        "image" => ("png", "image/png"),
+        "video" => ("mp4", "video/mp4"),
+        _ => return Err("Unknown media format".into()),
+    };
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    app_handle.dialog().file().set_file_name(format!("localmind-{id}.{extension}"))
+        .add_filter("Generated media", &[extension]).save_file(move |path| { tx.send(path).ok(); });
+    let Some(selected) = rx.await.map_err(|_| "Save dialog closed")? else { return Ok(false); };
+    let destination = selected.into_path().map_err(|_| "Choose a local file destination")?;
+    if destination.extension().and_then(|s| s.to_str()) != Some(extension) {
+        return Err(format!("Choose a .{extension} filename"));
+    }
+    let (url, token) = sidecar_url(&sidecar_state, &format!("/media/file/{id}"))?;
+    let response = localmind_core::http::local_client().get(url).bearer_auth(token).send().await
+        .map_err(|_| "Could not retrieve the generated file")?;
+    if !response.status().is_success() || response.headers().get("content-type").and_then(|h| h.to_str().ok()) != Some(mime) {
+        return Err("The media file is unavailable or has an unexpected format".into());
+    }
+    let mut data = Vec::new();
+    let mut stream = response.bytes_stream();
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|_| "The media download was interrupted")?;
+        if data.len() + chunk.len() > 100 * 1024 * 1024 { return Err("The media file is too large".into()); }
+        data.extend_from_slice(&chunk);
+    }
+    // Stage beside the selected destination, then replace atomically. Cancellation
+    // and failed downloads never truncate an existing user file.
+    let nonce = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_err(|_| "Clock unavailable")?.as_nanos();
+    let temporary = destination.with_extension(format!("{extension}.{nonce}.tmp"));
+    let mut staged = false;
+    let result = (|| -> std::io::Result<()> {
+        use std::io::Write;
+        let mut file = std::fs::OpenOptions::new().write(true).create_new(true).open(&temporary)?;
+        staged = true;
+        file.write_all(&data)?;
+        file.sync_all()?;
+        drop(file);
+        std::fs::rename(&temporary, &destination)
+    })();
+    if result.is_err() && staged { std::fs::remove_file(&temporary).ok(); }
+    result.map_err(|_| "Could not save media to the selected location".to_string())?;
+    Ok(true)
+}
+
+#[tauri::command]
 async fn voice_request(
     operation: String,
     payload: Option<serde_json::Value>,
@@ -2068,6 +2137,8 @@ pub fn run() {
             review_task_action,
             project_graph,
             voice_request,
+            media_request,
+            export_media,
             mcp_request,
             extension_request,
             list_tasks,

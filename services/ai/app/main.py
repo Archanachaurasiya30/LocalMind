@@ -25,6 +25,7 @@ from app.api.routes import (
     voice,
     mcp,
     extensions,
+    media,
 )
 from app.connectors.registry import setup_registry
 from app.db.messages import init_db as init_messages_db
@@ -50,9 +51,12 @@ async def lifespan(app: FastAPI):
         setup_registry()
         from app.sync_engine import start_background_sync, stop_background_sync
         await start_background_sync()
+        from app.media import jobs as media_jobs
+        media_jobs().recover()
         try:
             yield
         finally:
+            await media_jobs().shutdown()
             from app.mcp_client import owned_mcp
             await owned_mcp().stop()
             from app.connectors.registry import registry
@@ -90,3 +94,4 @@ app.include_router(project_graph.router)
 app.include_router(voice.router)
 app.include_router(mcp.router)
 app.include_router(extensions.router)
+app.include_router(media.router)

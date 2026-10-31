@@ -15,7 +15,7 @@ class CredentialUnavailable(RuntimeError):
 
 
 class CredentialStore:
-    KEYS = frozenset({"gmail-client", "gmail-token", "credential-test"})
+    KEYS = frozenset({"gmail-client", "gmail-token", "runway-token", "credential-test"})
 
     def __init__(self, backend=None):
         self._backend = backend

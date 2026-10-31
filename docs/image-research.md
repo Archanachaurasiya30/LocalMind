@@ -1,6 +1,6 @@
 # Local image research
 
-Image generation is not installed or enabled in the source beta. This opt-in benchmark is separate from the service and release dependencies. It does not use a paid API, upload prompts, train a model or change the chat model selection.
+Image generation remains disabled by default in the source beta. An optional, separate worker is now available through [Media](media.md) for explicit developer trials; its runtime and weights are not installed automatically. This opt-in benchmark remains separate from that worker and the release dependencies. It does not use a paid API, upload prompts, train a model or change the chat model selection.
 
 ## Model and download
 
@@ -28,7 +28,7 @@ The fixed prompts, seeds, notice and acceptance thresholds live in `evaluation/i
 
 ## Decision rule
 
-All ten images must finish, median generation must be at most 60 seconds, peak reserved VRAM at most 5.5 GiB and process RAM at most 12 GiB. Review every image against its requested subject and composition; at least seven must match. Inspect text and hands explicitly. Hardware success alone cannot enable a product feature: human visual acceptance and a separate installable, cancellable worker are still required. Failed trials stay disabled, with the failure and configuration retained locally.
+All ten images must finish, median generation must be at most 60 seconds, peak reserved VRAM at most 5.5 GiB and process RAM at most 12 GiB. Review every image against its requested subject and composition; at least seven must match. Inspect text and hands explicitly. Hardware success alone cannot enable a product feature: human visual acceptance and acceptance of the separate installable, cancellable worker are still required. The previous trial passed hardware limits but failed visual quality. The default product gate stays disabled, with the failure and configuration retained locally.
 
 These thresholds are product trial criteria, not external model benchmarks. A single laptop run is not a cross-platform performance guarantee.
 

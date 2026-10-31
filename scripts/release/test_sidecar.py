@@ -14,6 +14,25 @@ from smoke_sidecar import isolated_environment  # noqa: E402
 
 
 class NativeSidecarBuildTests(unittest.TestCase):
+    def test_media_worker_ships_as_source_without_inference_dependencies(self):
+        from build_sidecar import ROOT
+        worker = ROOT / "scripts/media/image_worker.py"
+        self.assertTrue(worker.is_file())
+        requirements = (ROOT / "services/ai/requirements.txt").read_text(encoding="utf-8")
+        for dependency in ("torch==", "diffusers==", "transformers==", "safetensors=="):
+            self.assertNotIn(dependency, requirements)
+        # Capture the real freezer invocation without producing a desktop binary.
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "sidecar"
+            def freeze(command, **_):
+                data = command[command.index("--add-data") + 1]
+                self.assertEqual(data, str(worker) + os.pathsep + "media-worker")
+                output = Path(command[command.index("--distpath") + 1])
+                output.mkdir()
+                (output / "localmind-sidecar.exe").write_bytes(b"fixture")
+            with patch("build_sidecar.validate_target"), patch("build_sidecar.binary_path", return_value=destination), patch("build_sidecar.subprocess.run", side_effect=freeze):
+                build("x86_64-pc-windows-msvc")
+
     def test_cross_architecture_build_fails_before_running_pyinstaller(self):
         with patch("build_sidecar.platform.system", return_value="Darwin"), \
                 patch("build_sidecar.platform.machine", return_value="arm64"), \
