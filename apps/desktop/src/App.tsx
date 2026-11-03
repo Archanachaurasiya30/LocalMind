@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { Brand } from "./components/Brand";
 import { ChatStarters } from "./components/ChatStarters";
+import { ChatReadiness } from "./components/ChatReadiness";
 import { useMiniWindow } from "./hooks/useMiniWindow";
 import { Composer } from "./components/Composer";
 import { ConversationList } from "./components/ConversationList";
@@ -44,6 +45,7 @@ import { useConversations } from "./hooks/useConversations";
 import { useMemory } from "./hooks/useMemory";
 import { useOllama } from "./hooks/useOllama";
 import { useSidecarStatus } from "./hooks/useSidecarStatus";
+import { useModelReadiness } from "./hooks/useModelReadiness";
 import { useProjects } from "./hooks/useProjects";
 import { MODEL_MAP } from "./types";
 import type { ModelMode, WebSource } from "./types";
@@ -259,11 +261,13 @@ export default function App() {
     [draftKey],
   );
   const selectedModel = modelMode === "speed" ? speedModel : balancedModel;
+  const modelCheck = useModelReadiness(selectedModel, modelMode,
+    runtime.status === "ready" && setupComplete && !modelSetupOpen);
   const modelAvailable = !!ollama?.models.some(
     (m) => m.name === selectedModel || m.name === `${selectedModel}:latest`,
   );
   const ready =
-    runtime.status === "ready" && !!ollama?.running && modelAvailable;
+    runtime.status === "ready" && !!ollama?.running && modelAvailable && modelCheck.ready;
 
   const navigate = useCallback((page: PageId) => {
     const show = () => {
@@ -435,9 +439,9 @@ export default function App() {
 
   return (
     <>
-      {!setupComplete && <FirstRunSetup onComplete={finishSetup} />}
+      {!setupComplete && <FirstRunSetup chatModel={selectedModel} preset={modelMode} onChooseChatModel={modelMode === "speed" ? setSpeedModel : setBalancedModel} onComplete={finishSetup} />}
       {setupComplete && modelSetupOpen && (
-        <FirstRunSetup forceShow onComplete={closeModelSetup} />
+        <FirstRunSetup chatModel={selectedModel} preset={modelMode} onChooseChatModel={modelMode === "speed" ? setSpeedModel : setBalancedModel} forceShow onComplete={closeModelSetup} />
       )}
       <div
         className={`app-shell ${miniActive ? "mini-mode" : ""}`}
@@ -613,7 +617,11 @@ export default function App() {
               )}
               <span className="local-label">
                 <ShieldCheck size={14} />
-                {activePage === "media" ? "Local + optional cloud" : "On this device"}
+                {activePage === "media"
+                  ? "Local + optional cloud"
+                  : activePage === "chats"
+                    ? (webSearchEnabled ? "Web search enabled" : "Local model")
+                    : "Local workspace"}
               </span>
             </div>
           </header>
@@ -667,59 +675,23 @@ export default function App() {
                 <div className="chat-welcome">
                   <div className="welcome-identity"><Brand size={24} /><span>Your local workspace</span></div>
                   <h2>What’s on your mind?</h2>
-                  <p>A question, a rough idea, a fresh start. Make it yours.</p>
+                  <p>Ask a question or explore an idea.</p>
                 </div>
               )}
               {!miniActive && activeId && !loadingConversation && !chatLoadError && <TaskActions key={`tasks-${activeId}`} conversationId={activeId} projectId={chatProjectId} isStreaming={isStreaming} onOpenTasks={() => navigate("tasks")} />}
-              {!ready && (
-                <div className="runtime-banner" role="status">
-                  <div>
-                    <strong>
-                      {runtime.status === "failed"
-                        ? "LocalMind couldn't start"
-                        : runtime.status !== "ready"
-                          ? "Starting your local workspace…"
-                          : !ollama?.running
-                            ? "Waiting for the model service"
-                            : !modelAvailable
-                              ? "Your selected model isn't installed"
-                              : "Checking your models…"}
-                    </strong>
-                    <p>
-                      {runtime.status === "failed"
-                        ? "Restart the local service to reconnect. Your saved data stays on this device."
-                        : runtime.status !== "ready"
-                          ? "You can write a message while the local service gets ready."
-                          : !ollama?.running
-                            ? "Check that Ollama is running, then return to this chat."
-                            : `Choose an installed model in Settings or download ${selectedModel}.`}
-                    </p>
-                    {runtime.error && (
-                      <details>
-                        <summary>Technical details</summary>
-                        <pre>{runtime.error}</pre>
-                      </details>
-                    )}
-                  </div>
-                  {runtime.status === "failed" ? (
-                    <button
-                      className="secondary-button"
-                      onClick={() => void runtime.restart()}
-                    >
-                      Restart service
-                    </button>
-                  ) : (
-                    runtime.status === "ready" && (
-                      <button
-                        className="secondary-button"
-                        onClick={() => navigate("settings")}
-                      >
-                        Open settings
-                      </button>
-                    )
-                  )}
-                </div>
-              )}
+              <ChatReadiness
+                runtimeStatus={runtime.status}
+                runtimeError={runtime.error}
+                ollamaRunning={!!ollama?.running}
+                modelAvailable={modelAvailable}
+                model={selectedModel}
+                checking={modelCheck.checking}
+                result={modelCheck.result}
+                onRestart={() => void runtime.restart()}
+                onRetry={modelCheck.retry}
+                onSettings={() => navigate("settings")}
+                onDownloads={() => setModelSetupOpen(true)}
+              />
               <Composer
                 messages={messages}
                 voiceScope={`${voiceScope}:${chatProjectId || "unassigned"}`}

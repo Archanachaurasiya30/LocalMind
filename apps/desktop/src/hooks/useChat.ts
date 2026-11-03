@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Message, ModelMode, WebSource } from "../types";
+import { Message, ModelMode, WebSource, ResponseDiagnostics } from "../types";
 export type { WebSource } from "../types";
 
 interface UseChatOptions {
@@ -175,6 +175,12 @@ export function useChat(options: UseChatOptions) {
           if (turn && p.request_id === turn.id) finish(turn, p.error);
         },
       ),
+      register<{ request_id: string; data: ResponseDiagnostics }>("chat-diagnostics", (p) => {
+        const turn = active.current;
+        if (!turn || p.request_id !== turn.id) return;
+        updateMessages(prev => prev.map(message => message.id === turn.id
+          ? { ...message, diagnostics: p.data } : message));
+      }),
       register<{ request_id: string; sources: WebSource[] }>(
         "chat-sources",
         (p) => {

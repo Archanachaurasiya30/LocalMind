@@ -125,3 +125,15 @@
   .starter-prompts { padding-bottom: 16px; }
   .mini-mode .chat-welcome h2 { font-size: 26px; }
 }
+/* Model readiness belongs beside the composer, with usable controls in mini chat. */
+.model-readiness-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.model-readiness-actions .secondary-button { white-space: normal; text-align: start; }
+.model-quality-notice { width: calc(100% - 60px); max-width: 740px; font-size: 0.8rem; line-height: 1.5; color: var(--text-2); margin: 8px auto 0; }
+.model-quality-notice summary { cursor: pointer; width: fit-content; }
+.model-quality-notice p { margin: 6px 0; }
+.mini-mode .model-quality-notice { width: auto; margin: 4px 12px; }
+.response-details { font-size: 0.8rem; margin: 12px 0; line-height: 1.5; }
+.response-details summary { cursor: pointer; }
+.response-details dl { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(0, 2fr); gap: 4px 12px; }
+.response-details dd { margin: 0; overflow-wrap: anywhere; }
+.response-details p { max-width: 65ch; }

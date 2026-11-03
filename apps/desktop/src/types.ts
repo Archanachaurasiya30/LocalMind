@@ -31,6 +31,24 @@ export interface Message {
   errorMessage?: string;
   cancelled?: boolean;
   sources?: WebSource[];
+  diagnostics?: ResponseDiagnostics;
+}
+
+export interface ResponseDiagnostics {
+  model: string;
+  digest?: string | null;
+  preset?: string | null;
+  context_window: number;
+  response_tokens: number;
+  history_dropped: number;
+  references_dropped: number;
+  references_shortened: number;
+  total_seconds: number | null;
+  first_token_seconds: number | null;
+  output_tokens: number | null;
+  input_tokens: number | null;
+  tokens_per_second: number | null;
+  stop_reason: string;
 }
 
 // Model names sent to the Python sidecar.
