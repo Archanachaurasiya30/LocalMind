@@ -83,7 +83,7 @@ class ChatStreamTests(unittest.IsolatedAsyncioTestCase):
         search.assert_not_called()
         budget = next(f["budget"] for f in frames if f["type"] == "context")
         self.assertFalse(budget["trimmed"])
-        frames = [f for f in frames if f["type"] != "context"]
+        frames = [f for f in frames if f["type"] not in ("context", "diagnostics")]
         self.assertEqual(frames[0], {"type": "status", "phase": "answering"})
         self.assertEqual(frames[1]["thinking"], "reason")
         self.assertEqual(frames[2]["content"], "Hello")

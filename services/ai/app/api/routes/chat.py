@@ -25,6 +25,7 @@ SSE event types:
 import json
 import asyncio
 import re
+import time
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 from typing import AsyncIterator
@@ -41,6 +42,7 @@ from app.context_budget import pack_context
 from app.context_retrieval import collect_context
 from app.inference_queue import inference_slot
 from app.model_profiles import generation_options, resolve_profile
+from app.response_diagnostics import response_diagnostics
 from app.db import search_config as search_cfg_db
 from app.search.fetcher import fetch_evidence
 from app.search.planning import plan_query, needs_freshness, is_recent, search_opted_out
@@ -269,6 +271,9 @@ async def _stream_ollama(request: ChatRequest) -> AsyncIterator[str]:
         yield f"data: {json.dumps({'type': 'sources', 'sources': sources})}\n\n"
     yield f"data: {json.dumps({'type': 'status', 'phase': 'answering'})}\n\n"
 
+    started = time.monotonic()
+    first_token = None
+    has_answer = False
     try:
         async with inference_slot("foreground"), httpx.AsyncClient(trust_env=False, timeout=STREAM_TIMEOUT) as client:
             async with client.stream(
@@ -289,13 +294,23 @@ async def _stream_ollama(request: ChatRequest) -> AsyncIterator[str]:
                         raise RuntimeError("The local model could not complete this response.")
                     thinking = chunk.get("message", {}).get("thinking", "")
                     content = chunk.get("message", {}).get("content", "")
+                    if content.strip():
+                        has_answer = True
+                        if first_token is None:
+                            first_token = time.monotonic() - started
                     if content or thinking:
                         event = json.dumps({"type": "token", "content": content, "thinking": thinking})
                         yield f"data: {event}\n\n"
 
                     if chunk.get("done"):
+                        diagnostics = response_diagnostics(request.model, profile, packed.report,
+                            elapsed=time.monotonic() - started, first_token=first_token, terminal=chunk)
+                        yield f"data: {json.dumps({'type': 'diagnostics', 'data': diagnostics})}\n\n"
                         if chunk.get("done_reason") == "length":
                             yield f"data: {json.dumps({'type': 'error', 'content': 'The reply reached its length limit. Increase Maximum response in Settings, or ask for a shorter answer.'})}\n\n"
+                            return
+                        if not has_answer:
+                            yield f"data: {json.dumps({'type': 'error', 'content': 'The model returned no answer. Try again, choose another model, or review its response settings.'})}\n\n"
                             return
                         yield f"data: {json.dumps({'type': 'done'})}\n\n"
                         return

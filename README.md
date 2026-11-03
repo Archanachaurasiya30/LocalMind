@@ -59,7 +59,7 @@ Updater bundles are signed with LocalMind's update key. Windows installers are n
 
 ## Get started
 
-1. **Finish model setup.** Download a model. Start with the compact option if memory is limited.
+1. **Finish model setup.** Choose your chat model, then explicitly download its weights if needed. Setup verifies that the selected model supports local chat. Compact models use fewer resources but can miss instructions and corrections.
 2. **Ask a question.** Choose a response preset from the composer. Follow up in the same chat to keep context.
 3. **Add your documents.** In Knowledge, add a folder and assign its project. Enable Knowledge in the matching chat; open citations to inspect source passages.
 4. **Review Memory.** Keep useful facts and remove anything you do not want reused.
@@ -80,6 +80,7 @@ Once models are installed, local chat and retrieval can work offline. Exact-text
 - **Ctrl/Cmd + Shift + M** switches between full-window and mini chat while the app is focused.
 - **Ctrl/Cmd + Shift + O** starts a new chat.
 - Reading older messages keeps your position; **Latest response** returns to the current reply.
+- **Response details** shows session-only model identity, timing and omitted context. Copy diagnostics shares metadata without the prompt or answer; it is not a correctness score.
 
 ## Optional and experimental features
 

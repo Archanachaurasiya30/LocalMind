@@ -51,6 +51,12 @@ class ProfileRequest(BaseModel):
     changes: dict | None = None
 
 
+@router.post("/readiness")
+async def model_readiness(request: ProfileRequest) -> dict:
+    from app.model_readiness import readiness
+    return await readiness(request.model, request.preset)
+
+
 @router.post("/profile")
 async def model_profile(request: ProfileRequest) -> dict:
     try:
