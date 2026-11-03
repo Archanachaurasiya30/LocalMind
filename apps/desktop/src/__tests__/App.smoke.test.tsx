@@ -17,6 +17,7 @@ let miniActive = false;
 let miniPinned = false;
 let failWindow = false;
 let failLoad = false;
+let modelReady = true;
 let pendingCreate: Promise<unknown> | null = null;
 const conversation = {
   id: "saved",
@@ -43,6 +44,7 @@ beforeEach(() => {
   miniPinned = false;
   failWindow = false;
   failLoad = false;
+  modelReady = true;
   pendingCreate = null;
   Object.defineProperty(window, "matchMedia", {
     writable: true,
@@ -75,6 +77,8 @@ beforeEach(() => {
     if (command === "get_runtime_status")
       return { status: "ready", error: null };
     if (command === "list_ollama_models") return ["qwen3:8b"];
+    if (command === "model_readiness") return { model: "qwen3:8b", preset: "balanced", ready: modelReady,
+      state: modelReady ? "ready" : "needs_setup", message: modelReady ? "Ready" : "Selected model cannot chat" };
     if (command === "get_ollama_status")
       return { running: true, models: [{ name: "qwen3:8b" }], gpu: null };
     if (command === "list_conversations") return [conversation];
@@ -103,6 +107,32 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("desktop chat workflow", () => {
+  it("updates the header when web search is enabled or disabled", async () => {
+    await setup();
+    fireEvent.click(screen.getByRole("button", { name: "Tools" }));
+    const web = screen.getByRole("button", { name: "Web" });
+    if (web.getAttribute("aria-pressed") === "true") fireEvent.click(web);
+    expect(screen.getByText("Local model", { selector: ".local-label" })).toBeTruthy();
+    fireEvent.click(web);
+    expect(screen.getByText("Web search enabled", { selector: ".local-label" })).toBeTruthy();
+    fireEvent.click(web);
+    expect(screen.getByText("Local model", { selector: ".local-label" })).toBeTruthy();
+  });
+  it("keeps drafts but blocks sending until the selected model passes inspection", async () => {
+    modelReady = false;
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Set up later" }));
+    await screen.findByText("Your model needs attention");
+    const input = screen.getByRole("textbox", { name: "Message LocalMind" });
+    fireEvent.change(input, { target: { value: "Keep my draft" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(invoke).not.toHaveBeenCalledWith("chat_stream", expect.anything());
+    expect((input as HTMLTextAreaElement).value).toBe("Keep my draft");
+    modelReady = true;
+    fireEvent.click(screen.getByRole("button", { name: "Check model again" }));
+    await screen.findByText("Running locally");
+    expect((input as HTMLTextAreaElement).value).toBe("Keep my draft");
+  });
   it("renders a ready workspace with keyboard-accessible navigation", async () => {
     const input = await setup();
     expect(input).toBeDefined();

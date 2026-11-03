@@ -251,13 +251,13 @@ describe("supporting page recovery", () => {
     });
     render(<FirstRunSetup onComplete={complete} />);
     fireEvent.click(
-      await screen.findByRole("button", { name: "Download 3 models" }),
+      await screen.findByRole("button", { name: "Download 1 model" }),
     );
     expect(
       await screen.findByRole("button", { name: "Retry downloads" }),
     ).toBeDefined();
     expect(complete).not.toHaveBeenCalled();
-    expect(screen.getAllByRole("alert")).toHaveLength(3);
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
   });
 
   it("opens the downloader from settings even when models are already installed", async () => {
@@ -268,7 +268,7 @@ describe("supporting page recovery", () => {
       await screen.findByRole("heading", { name: "Download local models" }),
     ).toBeDefined();
     expect(
-      screen.getByRole("button", { name: "Download 3 models" }),
+      screen.getByRole("button", { name: "Download 1 model" }),
     ).toBeDefined();
     expect(complete).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Done" }));

@@ -43,6 +43,21 @@ beforeEach(() => {
 });
 
 describe("request lifecycle", () => {
+  it("binds diagnostics to their active response and ignores late events from a previous turn", async () => {
+    const { result } = renderHook(() => useChat(options));
+    const id = await start(result, "First question");
+    const data = { model: "chat-custom", first_token_seconds: 0.4, history_dropped: 2 };
+    emit("chat-diagnostics", { request_id: "other", data });
+    expect(result.current.messages[1].diagnostics).toBeUndefined();
+    emit("chat-token", { request_id: id, content: "First answer" });
+    emit("chat-diagnostics", { request_id: id, data });
+    emit("chat-done", { request_id: id, error: null });
+    expect(result.current.messages[1].diagnostics).toEqual(data);
+    await start(result, "Next question");
+    emit("chat-diagnostics", { request_id: id, data: { model: "wrong" } });
+    expect(result.current.messages[3].diagnostics).toBeUndefined();
+    expect(result.current.messages[1].diagnostics).toEqual(data);
+  });
   it("uses the reviewed voice turn identity and saves the normal text conversation once", async () => {
     const { result } = renderHook(() => useChat(options));
     const turnId = crypto.randomUUID();
