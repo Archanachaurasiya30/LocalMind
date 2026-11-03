@@ -702,6 +702,13 @@ async fn chat_stream_inner(
                             .unwrap_or_default();
                         app_handle.emit("chat-sources", ChatSourcesPayload { request_id: request_id.clone(), sources }).ok();
                     }
+                    Some("diagnostics") => {
+                        if let Some(data) = value.get("data").filter(|data| data.is_object()) {
+                            app_handle.emit("chat-diagnostics", serde_json::json!({
+                                "request_id": request_id, "data": data,
+                            })).ok();
+                        }
+                    }
                     Some("done") => {
                         app_handle.emit("chat-done", ChatDonePayload { request_id: request_id.clone(), error: None }).ok();
                         return Ok(());
@@ -1805,6 +1812,15 @@ async fn model_profile(
 }
 
 #[tauri::command]
+async fn model_readiness(
+    model: String,
+    preset: String,
+    sidecar_state: tauri::State<'_, SidecarState>,
+) -> Result<serde_json::Value, String> {
+    model_profile_request(&sidecar_state, "/models/readiness", model, preset, None).await
+}
+
+#[tauri::command]
 async fn restore_model_profile(
     model: String,
     preset: String,
@@ -2152,6 +2168,7 @@ pub fn run() {
             get_followup_questions,
             list_ollama_models,
             model_profile,
+            model_readiness,
             restore_model_profile,
             pull_ollama_model,
             check_for_updates,

@@ -177,3 +177,23 @@ For comparisons, hold evidence, conversation, memory, date, and hardware conditi
 ## Reporting limits
 
 Do not claim a quality improvement, a completed model comparison, a passed desktop workflow, or training readiness from JSON validation. Corpus setup does not download models, train on these cases, or execute held-out cases. Record each deliberate run's tested configuration and limitations in its local artifact directory. Never turn unscored model outputs into approved training answers automatically.
+
+## Targeted chat-quality diagnostics
+
+`chat-quality-cases.json` contains 20 synthetic cases covering corrections, exact instructions,
+short reasoning, missing evidence and follow-ups. These are diagnostic examples, not training
+data, and their mechanical checks cannot certify answer quality.
+
+Run against an already installed local text model:
+
+```powershell
+python scripts/evaluation/compare_chat_policy.py --model qwen2.5:1.5b --suite evaluation/chat-quality-cases.json --seeds 0 1 --out artifacts/evaluation/chat-quality.json
+```
+
+The two arms use identical histories and generation settings, changing only the system policy.
+The runner records the model fingerprint, runtime version, full synthetic responses, time to
+first answer text, output tokens, and context-packing decisions. Streaming failures are recorded
+per request, the partial report is saved after each result, and any infrastructure failure produces
+exit code 2. Review complete answers before comparing models; a lexical pass is not a human pass.
+GPU execution can vary despite equal seeds. No model is downloaded or made the default by this command.
+Use a new output filename for each run. Reports stay under the ignored `artifacts/` folder.

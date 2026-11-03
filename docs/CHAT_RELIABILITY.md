@@ -62,3 +62,24 @@ Freshness checks intentionally sacrifice coverage: a relevant article without re
 Before choosing a different model, compare candidates on the same fixed prompts and evidence: date attribution, ambiguous follow-ups, missing evidence, conflicting reports, local-file questions, and instruction following. Score supported claims and correct abstentions, alongside response latency and memory use. The two local checks here establish that Qwen3 can handle the specific corrected paths; they do not establish that it is the best model for every task.
 
 The subsequent workspace redesign and independent-installation audit are documented in PRODUCT_REDESIGN.md and DESKTOP_RUNTIME.md. Broader model evaluation, stronger semantic retrieval, credential-vault storage, and genuine voice capability remain future work.
+
+## Model readiness and response diagnostics
+
+Setup now verifies the configured chat model rather than accepting any installed model.
+It checks local text completion, model fingerprint and supported response settings through
+the same profile validation used for inference. Embedding-only, remote, missing and incompatible
+models do not make chat ready. A failed inspection stays visible with a retry action. Setup
+downloads only explicitly checked models and reuses installed weights; skipping setup keeps
+chat disabled until its model passes inspection.
+
+Each generated response can show session-only **Response details**: model, fingerprint, preset,
+context and response limits, omitted history/references, first answer text timing, output token
+count and generation speed. The generation timer includes queue wait but excludes earlier search
+and retrieval. Copying this metadata excludes prompts, answers and source labels. Unknown metrics
+remain unavailable; a fast answer is not evidence of a correct answer. Reopened conversations
+do not yet restore these diagnostic details.
+
+Empty and reasoning-only completions are errors. Truncated output remains a partial answer,
+with its stop reason visible. Diagnostics carry the original request ID, so stale events cannot
+overwrite another conversation or response. There is no automatic retry, paid fallback, or
+model switch in response to these signals.
