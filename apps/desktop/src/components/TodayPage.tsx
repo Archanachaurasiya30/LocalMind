@@ -88,7 +88,6 @@ export function TodayPage({
               })}
             </p>
             <h1>{greeting}.</h1>
-            <p>Your conversations, knowledge, and projects in one place.</p>
           </div>
           <button
             className="page-button primary"
@@ -166,7 +165,7 @@ export function TodayPage({
                 <div>
                   <h3>No apps connected</h3>
                   <p>
-                    You can chat with your local model now. Add an app in
+                    Connected apps are optional. Add an app in
                     Connections when you need more context.
                   </p>
                 </div>

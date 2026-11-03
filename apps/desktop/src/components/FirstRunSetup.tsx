@@ -9,6 +9,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 import "./supporting-pages.css";
+import { MODEL_MAP } from "../types";
+import type { ModelReadiness } from "../hooks/useModelReadiness";
 
 const MODELS = [
   {
@@ -17,7 +19,6 @@ const MODELS = [
     description:
       "A compact model for quick conversations and background tasks.",
     size: "~1.0 GB",
-    recommended: true,
   },
   {
     name: "qwen3:8b",
@@ -25,21 +26,18 @@ const MODELS = [
     description:
       "A larger model for everyday chat and more involved questions.",
     size: "~5.2 GB",
-    recommended: true,
   },
   {
     name: "llama3.2",
     label: "Llama 3.2 · 3B",
     description: "A general-purpose model from Meta.",
     size: "~2.0 GB",
-    recommended: false,
   },
   {
     name: "nomic-embed-text",
     label: "Nomic Embed Text",
-    description: "Required to search and reference your files in Knowledge.",
+    description: "Adds semantic search to Knowledge. Exact-text search works without it.",
     size: "~274 MB",
-    recommended: true,
   },
 ];
 interface PullProgress {
@@ -54,15 +52,25 @@ type ModelState = "idle" | "pulling" | "done" | "error";
 export function FirstRunSetup({
   onComplete,
   forceShow = false,
+  chatModel = MODEL_MAP.balanced,
+  preset = "balanced",
+  onChooseChatModel,
 }: {
   onComplete: () => void;
   forceShow?: boolean;
+  chatModel?: string;
+  preset?: string;
+  onChooseChatModel?: (model: string) => void;
 }) {
+  const catalog = MODELS.some(model => model.name === chatModel) ? MODELS : [...MODELS, {
+    name: chatModel, label: chatModel, description: "Your selected chat model.", size: "Size depends on model",
+  }];
   const [checking, setChecking] = useState(true);
+  const [attempt, setAttempt] = useState(0);
   const [selected, setSelected] = useState(
     () =>
       new Set(
-        MODELS.filter((model) => model.recommended).map((model) => model.name),
+        [chatModel],
       ),
   );
   const [pulling, setPulling] = useState(false);
@@ -77,26 +85,32 @@ export function FirstRunSetup({
     let cancelled = false;
     mounted.current = true;
     invoke<string[]>("list_ollama_models")
-      .then((models) => {
+      .then(async (models) => {
         if (cancelled) return;
-        if (models.length && !forceShow) onComplete();
-        else setChecking(false);
+        const installed: Record<string, ModelState> = {};
+        for (const name of [...MODELS.map(model => model.name), chatModel]) {
+          if (models.includes(name) || models.includes(`${name}:latest`)) installed[name] = "done";
+        }
+        setStates(installed);
+        if (installed[chatModel] && !forceShow) {
+          const result = await invoke<ModelReadiness>("model_readiness", { model: chatModel, preset });
+          if (cancelled) return;
+          if (result.ready) { onComplete(); return; }
+          setError(result.message);
+        }
+        setChecking(false);
       })
       .catch(() => {
         if (cancelled) return;
-        if (forceShow) {
-          setChecking(false);
-          setError(
-            "Couldn’t check installed models. Make sure Ollama is running before downloading.",
-          );
-        } else onComplete();
+        setChecking(false);
+        setError("Couldn’t check installed models. Make sure the local service and Ollama are running, then retry.");
       });
     return () => {
       cancelled = true;
       mounted.current = false;
       unlistenRef.current?.();
     };
-  }, [onComplete, forceShow]);
+  }, [onComplete, forceShow, chatModel, preset, attempt]);
   useEffect(() => {
     dialogRef.current?.focus();
   }, [checking]);
@@ -159,6 +173,19 @@ export function FirstRunSetup({
       if (mounted.current) setPulling(false);
     }
   }
+  async function completeVerified() {
+    setChecking(true);
+    try {
+      const result = await invoke<ModelReadiness>("model_readiness", { model: chatModel, preset });
+      if (!mounted.current) return;
+      if (result.ready) onComplete();
+      else setError(result.message);
+    } catch {
+      if (mounted.current) setError("Could not verify the selected chat model. Retry, or choose Set up later.");
+    } finally {
+      if (mounted.current) setChecking(false);
+    }
+  }
   const allDone =
     selected.size > 0 && [...selected].every((name) => states[name] === "done");
   const hasErrors = [...selected].some((name) => states[name] === "error");
@@ -175,7 +202,7 @@ export function FirstRunSetup({
           if (event.key !== "Tab") return;
           const controls = Array.from(
             event.currentTarget.querySelectorAll<HTMLElement>(
-              "button:not([disabled]), input:not([disabled])",
+              "button:not([disabled]), input:not([disabled]), select:not([disabled])",
             ),
           );
           const first = controls[0];
@@ -215,20 +242,30 @@ export function FirstRunSetup({
               <h1 id="setup-title">
                 {forceShow
                   ? "Download local models"
-                  : "Make this your LocalMind"}
+                  : "Set up LocalMind"}
               </h1>
               <p>
                 Choose the models to install on this computer. You can change
                 your selection later in Settings.
               </p>
+              <p>Selected chat model: <strong>{chatModel}</strong>. Only checked models will download. A smaller model may be faster but can miss instructions and corrections.</p>
+              {onChooseChatModel && <label>Chat model
+                <select aria-label="Chat model" value={chatModel} disabled={pulling} onChange={event => {
+                  setSelected(new Set([event.target.value]));
+                  onChooseChatModel(event.target.value);
+                }}>
+                  {catalog.filter(model => model.name !== "nomic-embed-text").map(model => <option key={model.name} value={model.name}>{model.label}</option>)}
+                </select>
+              </label>}
             </header>
             {error && (
               <p className="page-notice error" role="alert">
                 {error}
+                <button type="button" className="page-button" onClick={() => { setError(null); setChecking(true); setAttempt(value => value + 1); }}>Retry model check</button>
               </p>
             )}
             <div className="setup-models">
-              {MODELS.map((model) => {
+              {catalog.map((model) => {
                 const state = states[model.name] ?? "idle";
                 const current = progress[model.name];
                 const percent = Math.min(
@@ -297,16 +334,14 @@ export function FirstRunSetup({
               ) : (
                 <>
                   <button className="page-button" onClick={onComplete}>
-                    {hasErrors
-                      ? "Continue with available models"
-                      : forceShow
+                    {forceShow
                         ? "Done"
                         : "Set up later"}
                   </button>
                   {allDone ? (
                     <button
                       className="page-button primary"
-                      onClick={onComplete}
+                      onClick={() => void completeVerified()}
                     >
                       Open LocalMind <ArrowRight size={15} />
                     </button>

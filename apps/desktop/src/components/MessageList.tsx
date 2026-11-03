@@ -3,6 +3,7 @@ import { ArrowDown, ExternalLink, RefreshCw } from "lucide-react";
 import type { Message } from "../types";
 import { Brand } from "./Brand";
 import { AnswerContent, CopyButton, safeWebUrl } from "./AnswerContent";
+import { ResponseDetails } from "./ResponseDetails";
 import { KnowledgeCitation } from "./KnowledgeCitation";
 
 interface MessageListProps {
@@ -158,6 +159,7 @@ const MessageRow = memo(function MessageRow({
       )}
       {message.errorMessage && <p className="response-status" role="note">{message.errorMessage}</p>}
       {message.cancelled && <p className="response-status">Response stopped</p>}
+      {!user && message.diagnostics && <ResponseDetails data={message.diagnostics} />}
       {(message.sources || []).some((source) => source.kind === "knowledge") && (
         <details className="message-sources">
           <summary>Local file passages</summary>
