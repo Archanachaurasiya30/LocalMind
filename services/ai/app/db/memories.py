@@ -81,11 +81,21 @@ def _ensure_schema() -> sqlite3.Connection:
 
 def insert_memories(contents: list[str], *, project_id: str | None = None,
                     conversation_id: str | None = None) -> list[dict]:
-    """Insert a batch of memory strings, skipping near-duplicates and junk.
+    """Insert memory strings and return only the newly stored rows, in input order."""
+    return [row for row in insert_memories_indexed(
+        contents, project_id=project_id, conversation_id=conversation_id,
+    ) if row is not None]
+
+
+def insert_memories_indexed(contents: list[str], *, project_id: str | None = None,
+                            conversation_id: str | None = None) -> list[dict | None]:
+    """Return one row or None per input position, preserving extraction link indices.
 
     A memory is skipped if:
     - It is shorter than 6 words (too vague)
-    - Its lowercased text already exists in the DB
+    - Its lowercased text already exists in this scope or earlier in this batch
+
+    Skipped inputs keep a None slot; they must not inherit another fact's links.
     """
     if not contents:
         return []
@@ -100,12 +110,14 @@ def insert_memories(contents: list[str], *, project_id: str | None = None,
     }
 
     now = datetime.now(timezone.utc).isoformat()
-    rows = []
+    rows: list[dict | None] = []
     for content in contents:
         content = content.strip()
         if len(content.split()) < 6:
+            rows.append(None)
             continue
         if content.lower() in existing_lower:
+            rows.append(None)
             continue
         mid = str(uuid.uuid4())
         conn.execute(

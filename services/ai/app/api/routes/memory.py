@@ -127,11 +127,19 @@ def _parse_extract_response(text: str) -> tuple[list[str], list[dict]]:
     if obj_match:
         try:
             data = json.loads(obj_match.group())
-            facts = [str(s) for s in data.get("facts", []) if s]
+            raw_facts = data.get("facts", [])
+            if not isinstance(raw_facts, list):
+                return [], []
+            # Links refer to the original facts array. Invalid entries must keep
+            # their positions until persistence marks them as skipped.
+            facts = [fact if isinstance(fact, str) else "" for fact in raw_facts]
+            raw_links = data.get("links", [])
+            if not isinstance(raw_links, list):
+                raw_links = []
             links = [
-                lnk for lnk in data.get("links", [])
+                lnk for lnk in raw_links
                 if isinstance(lnk, dict)
-                and isinstance(lnk.get("from_new"), int)
+                and type(lnk.get("from_new")) is int
                 and isinstance(lnk.get("to_id"), str)
                 and isinstance(lnk.get("relation"), str)
             ]
@@ -182,8 +190,9 @@ async def extract_memories(request: ExtractRequest) -> dict:
     except Exception:
         pass  # Extraction failure is non-fatal
 
-    new_rows = mem_db.insert_memories(extracted_texts, project_id=project_id,
-                                    conversation_id=request.conversation_id)
+    indexed_rows = mem_db.insert_memories_indexed(extracted_texts, project_id=project_id,
+                                                conversation_id=request.conversation_id)
+    new_rows = [row for row in indexed_rows if row is not None]
 
     # Create links proposed by the model (from_new index => existing memory id)
     created_links: list[dict] = []
@@ -191,8 +200,11 @@ async def extract_memories(request: ExtractRequest) -> dict:
         idx = lnk.get("from_new", -1)
         to_id = lnk.get("to_id", "")
         relation = lnk.get("relation", "related_to")
-        if 0 <= idx < len(new_rows) and to_id in existing_ids:
-            result = mem_db.create_link(new_rows[idx]["id"], to_id, relation)
+        if 0 <= idx < len(indexed_rows) and to_id in existing_ids:
+            source = indexed_rows[idx]
+            if source is None:
+                continue
+            result = mem_db.create_link(source["id"], to_id, relation)
             if result:
                 created_links.append(result)
 
