@@ -21,6 +21,45 @@ REAL_CLIENT = httpx.AsyncClient
 
 
 class AnswerPolicyTests(unittest.IsolatedAsyncioTestCase):
+    async def test_greeting_with_today_reaches_model_without_search_or_connectors(self):
+        for message in ("hello, how are you doing today?", "thats fine, i asked how are you?"):
+            with self.subTest(message=message), \
+                    patch.object(chat, "_run_web_search", AsyncMock(return_value=("", []))) as search, \
+                    patch.object(chat, "_gather_connector_context", AsyncMock(return_value="")) as connectors:
+                frames = await self.stream(message, web_search_enabled=True,
+                                           connector_context_enabled=True)
+                search.assert_not_awaited()
+                connectors.assert_not_awaited()
+                self.assertEqual(self.payloads[0]["messages"][-1]["content"], message)
+                self.assertEqual(next(f["content"] for f in frames if f["type"] == "token"),
+                                 "Fixture answer")
+                self.assertEqual(frames[-1]["type"], "done")
+
+    async def test_social_turn_uses_supported_fast_mode_without_overriding_user_choice(self):
+        profile = {"context_window": 16384, "response_tokens": 2048, "temperature": 0.2,
+                   "top_p": 0.9, "top_k": 40, "think": None, "thinking_values": [False, True]}
+        for saved, supported, expected in (
+            (None, [False, True], False),
+            (True, [False, True], True),
+            (False, [False, True], False),
+            (None, [], None),
+            (None, ["low", "high"], None),
+            (None, [0, 1], None),
+            ("low", ["low", "high"], "low"),
+        ):
+            with self.subTest(saved=saved, supported=supported), patch.object(
+                chat, "resolve_profile", AsyncMock(return_value={
+                    **profile, "think": saved, "thinking_values": supported})
+            ):
+                await self.stream("Hello, how are you doing today?", profile="balanced")
+                if expected is None:
+                    self.assertNotIn("think", self.payloads[0])
+                else:
+                    self.assertEqual(self.payloads[0]["think"], expected)
+        with patch.object(chat, "resolve_profile", AsyncMock(return_value=profile)):
+            await self.stream("Hello, explain backpropagation with an example.", profile="balanced")
+        self.assertNotIn("think", self.payloads[0])
+
     async def test_direct_task_creation_never_reaches_model_search_or_connectors(self):
         request = chat.ChatRequest(message="Please save that as a task called 'Read one chapter' in my Study project.",
                                    model="fixture", web_search_enabled=True,

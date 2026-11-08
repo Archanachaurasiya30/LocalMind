@@ -57,10 +57,29 @@ _OPT_OUT = re.compile(
     r"\b(?:use|using|based on)\s+only\s+(?:the\s+)?(?:provided|supplied|pasted|given)"
     r"\s+(?:text|excerpt|passage|context)\b"
 )
+_SOCIAL_PHRASE = (
+    r"(?:(?:hello|hi|hey)(?:\s+there)?|good\s+(?:morning|afternoon|evening|night)|"
+    r"how\s+are\s+you(?:\s+doing)?(?:\s+today)?|"
+    r"how(?:'s|\s+is)\s+(?:your\s+day(?:\s+going)?|it\s+going)(?:\s+today)?|"
+    r"what(?:'s|\s+is)\s+up|(?:thanks|thank\s+you)(?:\s+for\s+your\s+help)?(?:\s+today)?|"
+    r"(?:i\s+)?hope\s+you(?:\s+are|'re)\s+(?:doing\s+well|well|having\s+a\s+good\s+day)(?:\s+today)?|"
+    r"ok|okay|no\s+problem|never\s*mind|bye|goodbye|"
+    r"that'?s\s+fine|i\s+(?:just\s+)?asked)"
+)
+_SOCIAL_TURN = re.compile(rf"{_SOCIAL_PHRASE}(?:[\s,.!?;:]+{_SOCIAL_PHRASE})*[\s,.!?;:]*")
 
 
 def _normalized(message: str) -> str:
     return " ".join(message.replace("\u2019", "'").replace("\u2018", "'").lower().split())
+
+
+def is_social_turn(message: str) -> bool:
+    """Recognize whole social turns, never discard a task after a greeting."""
+    text = _normalized(message)
+    # Emoji decorate greetings but are not a reason to search the web. Keep
+    # the surrounding words so a mixed greeting/task still takes the task path.
+    text = re.sub(r"[\U0001F300-\U0001FAFF\u2600-\u27BF\uFE0F\u200D]", "", text).strip()
+    return len(text) <= 240 and _SOCIAL_TURN.fullmatch(text) is not None
 
 
 def _instruction(message: str) -> str:
@@ -104,6 +123,8 @@ def _source_requested(message: str) -> bool:
 
 
 def needs_freshness(message: str) -> bool:
+    if is_social_turn(message):
+        return False
     text = _normalized(message)
     if _TRANSFORM.search(text):
         text = _normalized(_instruction(message))
@@ -163,7 +184,7 @@ def plan_query(message: str, history: list[dict]) -> str | None:
     normalized = _normalized(text)
     if search_opted_out(text):
         return None
-    if re.fullmatch(r"(?:hello|hi|hey|thanks|thank you|ok|okay)[!.\s]*", text, re.I):
+    if is_social_turn(text):
         return None
     instruction = _normalized(_instruction(text)) if _TRANSFORM.search(normalized) else normalized
     links = _LINK.findall(text)

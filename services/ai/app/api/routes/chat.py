@@ -45,7 +45,7 @@ from app.model_profiles import generation_options, resolve_profile
 from app.response_diagnostics import response_diagnostics
 from app.db import search_config as search_cfg_db
 from app.search.fetcher import fetch_evidence
-from app.search.planning import plan_query, needs_freshness, is_recent, search_opted_out
+from app.search.planning import plan_query, needs_freshness, is_recent, search_opted_out, is_social_turn
 from app.search.providers import SearchResult, search
 
 router = APIRouter(prefix="/chat")
@@ -197,7 +197,7 @@ async def _stream_ollama(request: ChatRequest) -> AsyncIterator[str]:
 
     # Gather connector context (Gmail, WhatsApp, People Profiles)
     connector_context = ""
-    if request.connector_context_enabled:
+    if request.connector_context_enabled and not is_social_turn(request.message):
         connector_context = await _gather_connector_context(request.message)
 
     query = None
@@ -264,6 +264,12 @@ async def _stream_ollama(request: ChatRequest) -> AsyncIterator[str]:
         payload["options"] = generation_options(profile)
         if profile["think"] is not None:
             payload["think"] = profile["think"]
+        elif is_social_turn(request.message) and any(
+            value is False for value in profile.get("thinking_values", [])
+        ):
+            # A greeting does not need a reasoning preamble. Respect saved
+            # choices and only use controls advertised by this installation.
+            payload["think"] = False
 
     yield f"data: {json.dumps({'type': 'context', 'budget': packed.report})}\n\n"
     # Emit sources event before streaming so the UI can populate the panel

@@ -8,6 +8,28 @@ from app.search.planning import needs_freshness, plan_query, search_opted_out
 
 
 class SearchPlanningTests(unittest.TestCase):
+    def test_social_turns_do_not_request_recent_sources(self):
+        history = [{"role": "user", "content": "What is today's news?"},
+                   {"role": "assistant", "content": "I could not verify recent sources."}]
+        for message in ("hello, how are you doing today?", "How are you?",
+                        "thats fine, i asked how are you?", "How's your day going?",
+                        "Hey! How are you today?", "Good morning!", "nevermind",
+                        "Thanks for your help today!", "Okay, thank you.",
+                        "Hi, how are you today? 😊", "Hi there, how are you today?",
+                        "Hello, hope you are doing well today!"):
+            with self.subTest(message=message):
+                self.assertFalse(needs_freshness(message))
+                self.assertIsNone(plan_query(message, history))
+
+    def test_greeting_prefix_does_not_hide_a_real_search_request(self):
+        for message in ("Hello, how are you? What's the weather today?",
+                        "Hey, find the latest news in San Antonio.",
+                        "Good morning, check https://example.invalid/notice",
+                        "Thanks, show me sources for that claim.",
+                        "Hi there 😊, how are you? What is today's weather?"):
+            with self.subTest(message=message):
+                self.assertIsNotNone(plan_query(message, []))
+
     def test_ordinary_teaching_drafting_and_calculation_stay_local(self):
         messages = [
             "Walk me through XGBoost using a bicycle rental example.",

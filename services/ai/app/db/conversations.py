@@ -12,6 +12,7 @@ assistant messages and bumps the conversation updated_at timestamp.
 import json
 import sqlite3
 import uuid
+from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 from app.storage import data_dir as _data_dir
@@ -134,23 +135,23 @@ def save_turn(
         return
 
     now = datetime.now(timezone.utc).isoformat()
-    conn = _get_conn()
-    conn.executemany(
-        """
-        INSERT INTO conversation_messages (id, conversation_id, role, content, thinking, created_at, sources)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        """,
-        [
-            (str(uuid.uuid4()), conversation_id, "user",      user_content,      None,               now, "[]"),
-            (str(uuid.uuid4()), conversation_id, "assistant", assistant_content, assistant_thinking, now, json.dumps(sources or [])),
-        ],
-    )
-    conn.execute(
-        "UPDATE conversations SET updated_at = ? WHERE id = ?",
-        (now, conversation_id),
-    )
-    conn.commit()
-    conn.close()
+    # Roll back a partial turn and release the connection even when the caller
+    # retains the exception traceback. SQLite's context manager does not close it.
+    with closing(_get_conn()) as conn, conn:
+        conn.executemany(
+            """
+            INSERT INTO conversation_messages (id, conversation_id, role, content, thinking, created_at, sources)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                (str(uuid.uuid4()), conversation_id, "user",      user_content,      None,               now, "[]"),
+                (str(uuid.uuid4()), conversation_id, "assistant", assistant_content, assistant_thinking, now, json.dumps(sources or [])),
+            ],
+        )
+        conn.execute(
+            "UPDATE conversations SET updated_at = ? WHERE id = ?",
+            (now, conversation_id),
+        )
 
 
 def delete_conversation(conversation_id: str) -> bool:

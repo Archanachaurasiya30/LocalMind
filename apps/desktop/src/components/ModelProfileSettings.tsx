@@ -131,7 +131,7 @@ function ProfileEditor({ model, preset }: { model: string; preset: string }) {
                   setProfile({ ...profile, think: JSON.parse(e.target.value) });
                   setNotice("");
                 }}>
-                <option value="null">Model default</option>
+                <option value="null">{profile.thinking_values.includes(false) ? "Automatic" : "Model default"}</option>
                 {profile.thinking_values.map((value) => (
                   <option key={JSON.stringify(value)} value={JSON.stringify(value)}>
                     {value === true ? "On" : value === false ? "Off" : value}
@@ -141,6 +141,7 @@ function ProfileEditor({ model, preset }: { model: string; preset: string }) {
             </label>
           </div>
           <p className="page-footnote">Larger contexts use more memory. Thinking can delay the first answer. At least {minimumInputBudget.toLocaleString()} tokens are reserved for your message, instructions, and context. Unsupported thinking controls remain unavailable.</p>
+          {profile.thinking_values.includes(false) && <p className="page-footnote">Automatic skips thinking for greetings and uses the model default for other requests. Choose On or Off to apply that setting to every reply.</p>}
           <div className="settings-save">
             <button className="page-button primary" disabled={busy} type="submit">{busy ? "Saving…" : "Save response settings"}</button>
             <button className="page-button" disabled={busy} type="button" onClick={() => void save(true)}>Restore previous settings</button>
