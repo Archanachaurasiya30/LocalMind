@@ -1,11 +1,8 @@
 # Security Policy
 
-## Supported Versions
+## Version information
 
-| Version | Supported |
-|---------|-----------|
-| 0.5.x   | ✅ Active  |
-| < 0.5   | ❌ No      |
+Include the installed version or source commit in your report. The [latest release](https://github.com/Swarneil1905/LocalMind/releases/latest) identifies the current published version; `main` may contain changes that have not shipped. If you reproduced the issue on multiple versions, list them separately.
 
 ## Reporting a Vulnerability
 
@@ -34,15 +31,14 @@ Include:
 
 ## Security Model
 
-LocalMind is designed as a **fully local, privacy-first** application:
+Local chat inference runs on the user's computer through Ollama. Optional features have separate network and credential requirements:
 
-- **No telemetry.** No usage data is collected or transmitted. All settings default to off.
-- **No account required.** The app runs without creating an account or authenticating to any cloud service.
-- **No cloud LLM calls.** All inference is performed locally via Ollama. Enabling web search is the only optional network feature, and it is opt-in and clearly labelled.
-- **API keys stored locally.** Any API keys (e.g., web search providers) are stored only in the local SQLite database on the user's machine and are never logged or transmitted.
-- **Sidecar authentication.** The Python sidecar is authenticated with a per-session bearer token generated at startup. The token is never written to disk.
-- **SSRF protection.** The web fetcher validates URLs against a blocklist of private IP ranges (RFC 1918, RFC 4193, loopback) before making any outbound request.
-- **Prompt injection sanitization.** Content fetched from the web is stripped of instruction-like patterns before being injected into the model context.
+- **No built-in analytics or usage tracking.** Local chat does not require a LocalMind account. Optional connected services can require their own accounts.
+- **Network use.** Web queries and retrieved pages, authorized connectors, reviewed Runway video requests, model/runtime downloads and GitHub update checks can use the network. See the [data destinations](README.md#your-data) and [feature limitations](README.md#optional-and-experimental-features).
+- **Credentials and stored data.** Gmail and Runway credentials use the native OS credential store with no plaintext fallback. Credentials are used to authenticate to their providers. Ordinary profile databases are not encrypted by LocalMind and rely on OS account permissions.
+- **Sidecar authentication.** The Python sidecar listens on loopback and uses a per-session bearer token generated at startup. The token is never written to disk. This is a local desktop boundary, not a hosted multi-user authentication system.
+- **Web fetching.** The fetcher checks destination addresses and redirect hops, rejecting private, loopback and link-local addresses. Report bypasses privately.
+- **Untrusted context.** Web content is filtered and supplied as reference data. These measures do not guarantee protection against prompt injection. Action approval and scope checks must remain enforced outside model-generated text.
 
 ## Scope
 

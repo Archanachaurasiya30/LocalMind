@@ -8,7 +8,7 @@
 
 LocalMind is a desktop app for chatting with local AI, exploring your documents, and keeping useful context close. Run it in a full workspace or keep a small, pinned chat beside what you are doing. No LocalMind account or cloud AI subscription is required for local chat.
 
-[Download](https://github.com/Swarneil1905/LocalMind/releases/latest) · [Watch the walkthrough](https://swarneil1905.github.io/LocalMind/) · [Get started](#get-started) · [Development](#development) · [Report a bug](https://github.com/Swarneil1905/LocalMind/issues)
+[Download](https://github.com/Swarneil1905/LocalMind/releases/latest) · [Watch the walkthrough](https://swarneil1905.github.io/LocalMind/) · [Get started](#get-started) · [Contribute](CONTRIBUTING.md) · [Development](#development) · [Report a bug](https://github.com/Swarneil1905/LocalMind/issues)
 
 [![Frontend](https://github.com/Swarneil1905/LocalMind/actions/workflows/ci-frontend.yml/badge.svg)](https://github.com/Swarneil1905/LocalMind/actions/workflows/ci-frontend.yml)
 [![Python](https://github.com/Swarneil1905/LocalMind/actions/workflows/ci-python.yml/badge.svg)](https://github.com/Swarneil1905/LocalMind/actions/workflows/ci-python.yml)
@@ -137,12 +137,14 @@ For [bug reports](https://github.com/Swarneil1905/LocalMind/issues), include ver
 
 ## Development
 
+New to the repository? Read the [contributor guide](CONTRIBUTING.md) for setup, checks and your first pull request. The [codebase map](docs/CODEBASE.md) traces a chat message through the app and lists the files and tests for each feature. Bug reports, documentation fixes and usability testing are useful contributions too.
+
 The stack is React/TypeScript, Tauri/Rust, Python/FastAPI, SQLite/LanceDB and Ollama. CI uses **Node.js 22, pnpm 11.0.9, Python 3.11 and Rust stable**. Native builds need the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/). Start with the [desktop development guide](apps/desktop/README.md). Docker is not required.
 
 | Directory | Responsibility |
 | --- | --- |
 | `apps/desktop/src` | Interface and frontend tests |
-| `apps/desktop/src-tauri`, `crates/` | Native commands, lifecycle, permissions and runtime |
+| `apps/desktop/src-tauri`, `crates/` | Native commands, capabilities, process lifecycle and runtime; see the codebase map for scaffolded crates |
 | `services/ai` | Inference orchestration, retrieval, persistence and service tests |
 | `scripts/media` | Optional isolated image worker |
 | `scripts/release` | Packaging, payload checks, signatures and publication |

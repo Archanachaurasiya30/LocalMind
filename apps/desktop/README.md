@@ -4,6 +4,8 @@ The desktop app combines React, TypeScript, and Vite with Tauri 2. Rust launches
 
 For installation and product features, see the [main README](../../README.md). Run the commands below from the repository root unless a step says otherwise.
 
+For your first change, follow [CONTRIBUTING.md](../../CONTRIBUTING.md). The [codebase map](../../docs/CODEBASE.md) explains the request flow and points to the files and tests for each feature.
+
 ## Prerequisites
 
 - Node.js 22 and pnpm 11.0.9.
