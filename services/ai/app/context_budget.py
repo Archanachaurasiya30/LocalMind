@@ -65,7 +65,8 @@ def pack_context(
             "Shorten it or select a larger context profile."
         )
     valid_history = [
-        {"role": item["role"], "content": item["content"]}
+        {"role": item["role"], "content": item["content"],
+         **({"message_id": item["message_id"]} if isinstance(item.get("message_id"), str) else {})}
         for item in history
         if item.get("role") in ("user", "assistant") and isinstance(item.get("content"), str)
     ]
@@ -128,8 +129,10 @@ def pack_context(
             used += cost
     messages = [
         required[0],
-        *(item for i, item in enumerate(valid_history) if i in retained),
+        # References precede the conversation, so the last thing before a
+        # referential follow-up is its active conversation rather than a memory.
         *reference_message,
+        *(item for i, item in enumerate(valid_history) if i in retained),
         required[1],
     ]
     return PackedContext(messages, {

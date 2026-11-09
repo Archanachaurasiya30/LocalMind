@@ -142,6 +142,10 @@ class MediaJobs:
 
     def recover(self):
         for job in store.listing():
+            if job['kind'] == 'cloud-image' and job['state'] in {'submitting', 'generating'}:
+                from app.provider_store import settle
+                settle(job['id'])
+                store.update(job['id'], state='unknown', message='LocalMind closed before the image request could be verified. Check OpenAI billing; no retry was sent.')
             if job["kind"] in ("image", "image-install") and job["state"] in {"queued", "generating", "downloading"}:
                 store.update(job["id"], state="failed", message="Local image work stopped when LocalMind closed. You can start a new job.")
             elif job["kind"] == "video":
@@ -329,6 +333,20 @@ class MediaJobs:
 
     async def cancel(self, job_id):
         job = store.get(job_id)
+        if job['kind'] == 'cloud-image':
+            if job['state'] == 'review':
+                return public(store.update(job_id, state='cancelled', message='Nothing was sent to OpenAI.'))
+            task = self.tasks.get(job_id)
+            if task and not task.done():
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
+                # Cancellation can win before the coroutine enters its try block.
+                current = store.get(job_id)
+                if current['state'] in {'submitting', 'generating'}:
+                    from app.provider_store import settle
+                    settle(job_id)
+                    store.update(job_id, state='cancelled', message='Stopped waiting locally. The request outcome is unverified; check provider billing before retrying.')
+            return public(store.get(job_id))
         if job["kind"] == "video":
             if job["state"] != "review":
                 raise ValueError("Submitted video tasks cannot be cancelled here. Check Runway for cancellation and billing.")

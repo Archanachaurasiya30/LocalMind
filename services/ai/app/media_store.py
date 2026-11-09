@@ -80,7 +80,7 @@ def claim(job_id):
         reserved = sum(row["cost_cents"] for row in rows(db)
                        if row["reserved"] and row.get("submitted_at", "").startswith(month))
         if reserved + job["cost_cents"] > 5000:
-            raise ValueError("The $50 monthly LocalMind video allowance is reserved. Check Runway billing before continuing.")
+            raise ValueError("The $50 monthly LocalMind media allowance is reserved. Check provider billing before continuing.")
         job.update(state="submitting", reserved=True, submitted_at=now(),
                    message="Sending this reviewed request once.")
         save(db, job)

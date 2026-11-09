@@ -15,7 +15,8 @@ class CredentialUnavailable(RuntimeError):
 
 
 class CredentialStore:
-    KEYS = frozenset({"gmail-client", "gmail-token", "runway-token", "credential-test"})
+    KEYS = frozenset({"gmail-client", "gmail-token", "runway-token", "credential-test",
+                      "chat-openai", "chat-anthropic", "chat-gemini"})
 
     def __init__(self, backend=None):
         self._backend = backend

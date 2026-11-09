@@ -26,6 +26,9 @@ from app.api.routes import (
     mcp,
     extensions,
     media,
+    attachments,
+    visuals,
+    providers,
 )
 from app.connectors.registry import setup_registry
 from app.db.messages import init_db as init_messages_db
@@ -95,3 +98,7 @@ app.include_router(voice.router)
 app.include_router(mcp.router)
 app.include_router(extensions.router)
 app.include_router(media.router)
+app.include_router(attachments.router)
+app.include_router(providers.router)
+
+app.include_router(visuals.router)

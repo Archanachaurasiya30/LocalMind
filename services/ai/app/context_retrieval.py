@@ -3,10 +3,80 @@ import json
 import re
 
 from app.db import conversations, knowledge, memories, projects
+from app.search.planning import is_social_turn
 
 _STOP = set("the and for that this with from have your you about please what when where which "
             "would could should can how does more some just into been their there them then "
-            "help give tell make show want need".split())
+            "help give tell make show want need explain explanation explanations example examples "
+            "diagram flowchart details detail understand concept concepts learn learning teaching "
+            "step steps deeply again further simpler briefly expand elaborate".split())
+
+_FOLLOW_UP = re.compile(
+    r"\b(?:it|its|that|this|these|those|them|they|their|above|previous|same|"
+    r"more details|more detail|go deeper|tell me more|continue|elaborate)\b|"
+    r"^(?:please\s+)?(?:give|show|draw|make|create)\s+(?:me\s+)?(?:an?\s+)?"
+    r"(?:example|diagram|flowchart|analogy)\b", re.I,
+)
+_TOPIC_CHANGE = re.compile(
+    r"^(?:please\s+)?(?:new (?:topic|question)|different (?:topic|question)|"
+    r"switch (?:topics?|to)|moving on|instead[, :]|forget (?:that|this))\b", re.I,
+)
+_EXPLICIT_SUBJECT = re.compile(
+    r"^(?:(?:please|now)\s*,?\s*)*(?:(?:can|could|would)\s+you\s+)?"
+    r"(?:explain|describe|teach me|tell me about|what (?:is|are)|how (?:does|do))\s+"
+    r"(?!(?:it|its|that|this|these|those|they|their|the above|the same|your|in more|"
+    r"more|further|again)\b)\w", re.I,
+)
+_STYLE_PREFERENCE = re.compile(
+    r"^(?:you|the user|user)\s+prefers?\s+(?:(?:learning|explanations?)\s+"
+    r"(?:through|with|using)\s+)?(?:(?:small|short|worked|concrete|simple|visual)\s+)*"
+    r"(?:examples?|equations|diagrams|step[- ]by[- ]step explanations?)"
+    r"(?:\s+before\s+(?:equations|code|theory))?[.!]?\s*$", re.I,
+)
+
+
+def resolve_history(history: list[dict], conversation_id: str | None = None,
+                    project_id: str | None = None) -> list[dict]:
+    """Saved chats use their own history, never a client-supplied cross-chat list.
+
+    Unsaved drafts can carry ordinary turns, but role injection and explicitly
+    owned rows from another conversation are discarded. Clients must finish
+    saving a completed turn before allowing its follow-up to be sent.
+    """
+    resolve_project(project_id, conversation_id)
+    rows = conversations.get_messages(conversation_id) if conversation_id else history
+    return [{"role": row["role"], "content": row["content"],
+             **({"message_id": row["id"]} if conversation_id and isinstance(row.get("id"), str) else {})}
+            for row in rows
+            if isinstance(row, dict) and row.get("role") in ("user", "assistant")
+            and isinstance(row.get("content"), str)
+            and row.get("status", "completed") == "completed" and not row.get("partial", False)
+            and (conversation_id is not None or not row.get("conversation_id"))]
+
+
+def retrieval_query(message: str, history: list[dict]) -> str:
+    """Keep the latest explicit subject and its referential follow-ups together.
+
+    This bounded lexical heuristic does not infer a topic from saved memories.
+    An explicit new request searches on its own; it cannot revive the prior
+    subject just because that subject was discussed one turn ago.
+    """
+    current = message.strip()
+    if (is_social_turn(current) or _TOPIC_CHANGE.search(current)
+            or _EXPLICIT_SUBJECT.search(current) or not _FOLLOW_UP.search(current)):
+        return current[-4000:]
+    chain = [current]
+    for row in reversed(history[-24:]):
+        if row.get("role") != "user" or not isinstance(row.get("content"), str):
+            continue
+        content = row["content"].strip()
+        if is_social_turn(content):
+            continue
+        chain.insert(0, content)
+        if (_TOPIC_CHANGE.search(content) or _EXPLICIT_SUBJECT.search(content)
+                or not _FOLLOW_UP.search(content)):
+            break
+    return "\n".join(chain)[-4000:]
 
 
 def resolve_project(project_id: str | None, conversation_id: str | None) -> str | None:
@@ -47,9 +117,7 @@ def select_memories(query: str, candidates: list[dict], *,
         content = item.get("content", "")
         words = _terms(content)
         score = len(terms & words)
-        if learning and re.search(r"\bprefer\w*\b", content, re.I) and words & {
-            "examples", "example", "learn", "learning", "equations", "explanations",
-        }:
+        if learning and _STYLE_PREFERENCE.fullmatch(content):
             score += 2
         if score:
             ranked.append((score, -index, item))
@@ -67,9 +135,7 @@ async def collect_context(
     hyde_enabled: bool = False,
 ) -> list[dict[str, str]]:
     project_id = resolve_project(project_id, conversation_id)
-    recent = [m["content"] for m in history[-6:]
-              if m.get("role") == "user" and isinstance(m.get("content"), str)]
-    query = "\n".join([*recent[-2:], message])[-4000:]
+    query = retrieval_query(message, history)
     references = []
     if memory_enabled:
         selected = select_memories(query, memories.list_all(), project_id=project_id,

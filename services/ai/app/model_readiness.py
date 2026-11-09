@@ -25,4 +25,6 @@ async def readiness(model: str, preset: str) -> dict:
             "message": "Selected model is available for local chat.",
             "digest": profile["digest"], "context_window": profile["context_window"],
             "response_tokens": profile["response_tokens"],
+            "capabilities": profile.get("capabilities", []),
+            "vision": "vision" in profile.get("capabilities", []),
             "notice": quality_notice(model), "settings_notice": profile.get("settings_notice")}

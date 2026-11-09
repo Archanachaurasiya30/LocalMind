@@ -136,6 +136,13 @@ def needs_freshness(message: str) -> bool:
     text = re.sub(r"\b(?:latest|newest|recent|current)\s+(?:updates?|notes?|"
                   r"details?|results?|changes?|information)\s+(?:that\s+)?"
                   r"(?:i|we|you)\s+(?:just\s+)?(?:shared|provided|pasted|sent|discussed)\b", "", text)
+    # Weather conditions implicitly mean current conditions unless the user is
+    # studying the subject or explicitly asking about a historical period.
+    if (re.search(r"\b(?:weather|forecast)\b", text)
+            and not (_TEACHING.search(text) or _TRANSFORM.search(text))
+            and not re.search(r"\b(?:was|were|history|historical|yesterday|last|"
+                              r"(?:19|20)\d{2})\b", text)):
+        return True
     if _TIME_CUE.search(text):
         # "Write a study plan for today" schedules local work. A plan using
         # today's weather/news still needs those external facts.
@@ -154,6 +161,32 @@ def needs_freshness(message: str) -> bool:
         or re.search(r"\b(?:happening|open|available|in stock|who is)\b", text)
     ) and not re.match(r"^now\s*,?\s*(?:please\s+)?(?:explain|teach|rewrite|"
                          r"rephrase|translate|summari[sz]e)\b", text))
+
+
+def current_information_reply(message: str, *, web_allowed: bool,
+                              opted_out: bool = False) -> str | None:
+    """Give a usable offline path rather than inviting a model to guess live facts."""
+    if web_allowed or not needs_freshness(message):
+        return None
+    if opted_out:
+        return (
+            "I can't verify current information without searching, and I'll respect your "
+            "request to stay offline. If you paste a dated source, I can help interpret it."
+        )
+    return (
+        "Web search is off, so I can't verify current information for this question. "
+        "Turn on Web in the chat tools and send it again, or paste a dated source for me to read."
+    )
+
+
+def freshness_window_seconds(message: str) -> int:
+    """A publication-age ceiling, not proof of an observation's validity."""
+    # plan_query prefixes the current date to live requests; it is routing
+    # metadata rather than a user-specified historical year.
+    text = re.sub(r"^\d{4}-\d{2}-\d{2}\s+", "", _normalized(message))
+    if needs_freshness(text) and re.search(r"\b(?:weather|forecast|temperature)\b", text):
+        return 3 * 3600
+    return 7 * 86400
 
 
 def _source_context(message: str, history: list[dict]) -> str | None:
@@ -239,14 +272,22 @@ def plan_query(message: str, history: list[dict]) -> str | None:
     return " ".join(text.split())[:500]
 
 
-def is_recent(published_at: str | None, now: datetime | None = None) -> bool:
+def is_recent(published_at: str | None, now: datetime | None = None, *,
+              max_age_seconds: int = 7 * 86400) -> bool:
     if not published_at:
         return False
     try:
+        if type(max_age_seconds) is not int or max_age_seconds < 1:
+            return False
+        # A date-only source cannot establish a sub-day freshness promise.
+        if max_age_seconds < 86400 and not re.search(r"[T ]\d{2}:\d{2}", published_at):
+            return False
         published = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
         if published.tzinfo is None:
+            if max_age_seconds < 86400:
+                return False
             published = published.replace(tzinfo=timezone.utc)
         age = (now or datetime.now(timezone.utc)) - published
-        return 0 <= age.total_seconds() <= 7 * 86400
+        return 0 <= age.total_seconds() <= max_age_seconds
     except ValueError:
         return False
