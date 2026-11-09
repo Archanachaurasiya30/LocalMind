@@ -98,6 +98,14 @@ jobs:
           PYTHONPATH: services/ai
         run: python -m unittest discover -s services/ai/tests -p "test_database_persistence.py" -v
 
+      - name: Install visual and document test dependencies
+        run: python -m pip install Pillow==12.0.0 pypdf==5.1.0
+
+      - name: Exercise visual revisions, attachment ownership and document workers
+        env:
+          PYTHONPATH: services/ai
+        run: python -m unittest discover -s services/ai/tests -p "test_visual_documents.py" -v
+
   windows-repair-gate:
     name: Windows repair conflicts and recovery
     runs-on: windows-latest

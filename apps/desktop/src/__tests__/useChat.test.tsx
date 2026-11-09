@@ -43,6 +43,50 @@ beforeEach(() => {
 });
 
 describe("request lifecycle", () => {
+  it("does not extract memory from a reply whose durable save failed", async () => {
+    const failed = vi.fn();
+    const { result } = renderHook(() => useChat({ ...options, onTurnComplete: async () => { throw new Error("Database unavailable"); }, onTurnFailure: failed }));
+    const id = await start(result, "Help with the draft");
+    emit("chat-token", { request_id: id, content: "A useful answer to preserve." });
+    emit("chat-done", { request_id: id, error: null });
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    expect(result.current.messages[1]).toMatchObject({ content: "A useful answer to preserve.", error: true });
+    expect(failed).toHaveBeenCalledWith("Help with the draft", "conversation-a");
+    expect(invoke).not.toHaveBeenCalledWith("extract_memories", expect.anything());
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith("save_interrupted_turn", expect.objectContaining({ requestId: id, assistantContent: "A useful answer to preserve." })));
+  });
+  it("waits for persistence before accepting a follow-up and ignores chunks after completion", async () => {
+    let save!: () => void;
+    const persist = vi.fn(() => new Promise<void>(resolve => { save = resolve; }));
+    const { result } = renderHook(() => useChat({ ...options, onTurnComplete: persist }));
+    const id = await start(result, "Explain tides");
+    emit("chat-token", { request_id: id, content: "Gravity drives tides." });
+    emit("chat-done", { request_id: id, error: null });
+    emit("chat-token", { request_id: id, content: "Late incorrect chunk" });
+    await act(() => result.current.sendMessage("Explain more", "conversation-a"));
+    expect(vi.mocked(invoke).mock.calls.filter(([name]) => name === "chat_stream")).toHaveLength(1);
+    expect(result.current.messages[1].content).toBe("Gravity drives tides.");
+    await act(async () => save());
+    expect(result.current.isStreaming).toBe(false);
+    await act(() => result.current.sendMessage("Explain more", "conversation-a"));
+    expect(vi.mocked(invoke).mock.calls.filter(([name]) => name === "chat_stream")).toHaveLength(2);
+  });
+  it("snapshots the cloud provider and attachment identity without replaying a failed generation", async () => {
+    const failed = vi.fn();
+    const { result } = renderHook(() => useChat({ ...options, onTurnFailure: failed }));
+    const attachment = { id: "attachment-a", filename: "image.png", mime_type: "image/png", bytes: 8, width: 1, height: 1 };
+    await act(() => result.current.sendMessage("Explain this", "conversation-a", "turn-a", {
+      provider: "anthropic", model: "configured-model", consentId: "consent-a", attachments: [attachment], attachmentDraftId: "draft-a",
+    }));
+    expect(invoke).toHaveBeenCalledWith("chat_stream", expect.objectContaining({ provider: "anthropic", model: "configured-model",
+      consentId: "consent-a", attachmentIds: ["attachment-a"], attachmentDraftId: "draft-a", connectorContextEnabled: false }));
+    emit("chat-token", { request_id: "turn-a", content: "The image shows" });
+    emit("chat-done", { request_id: "turn-a", error: "Connection lost. A charge may have occurred." });
+    expect(failed).toHaveBeenCalledWith("Explain this", "conversation-a", expect.objectContaining({ attachmentDraftId: "draft-a", attachments: [attachment] }));
+    expect(result.current.messages[0].attachments).toEqual([attachment]);
+    expect(result.current.messages[1].content).toBe("The image shows");
+    expect(vi.mocked(invoke).mock.calls.filter(([name]) => name === "chat_stream")).toHaveLength(1);
+  });
   it("binds diagnostics to their active response and ignores late events from a previous turn", async () => {
     const { result } = renderHook(() => useChat(options));
     const id = await start(result, "First question");

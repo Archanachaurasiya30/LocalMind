@@ -288,3 +288,75 @@ describe("mini chat window", () => {
     expect(input.value).toBe("Keep me");
   });
 });
+
+describe("cloud chat handoff", () => {
+  it("reviews newly included project context even when the Knowledge toggle is off", async () => {
+    const original = vi.mocked(invoke).getMockImplementation()!;
+    const provider = { id: "openai", label: "OpenAI", connected: true, model: "configured-model", vision: true,
+      approved_scopes: ["messages"], consent_id: "messages-only", consent_model: "configured-model" };
+    vi.mocked(invoke).mockImplementation(async (command, args) => {
+      if (command === "list_projects") return { projects: [{ id: "project-a", name: "Research project", path: null }] };
+      if (command === "provider_request") {
+        const request = args as { path: string };
+        if (request.path === "/providers") return { local_only: false, providers: [provider] };
+        if (request.path === "/chat/preview") return { provider: "openai", model: "configured-model", scopes: ["messages", "knowledge"], messages: [{ role: "user", content: "Project excerpt" }] };
+      }
+      return original(command, args);
+    });
+    const input = await setup();
+    fireEvent.click(screen.getByRole("button", { name: "Saved conversation" }));
+    await screen.findByText("Previous answer");
+    await screen.findByRole("option", { name: /OpenAI · configured-model/ });
+    fireEvent.change(screen.getByLabelText("Chat provider"), { target: { value: "openai" } });
+    fireEvent.click(screen.getByRole("button", { name: "Tools" }));
+    const memory = screen.getByRole("button", { name: "Memory", pressed: true });
+    if (memory.getAttribute("aria-pressed") === "true") fireEvent.click(memory);
+    expect(screen.getByRole("button", { name: "Knowledge", pressed: false }).getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(screen.getByRole("button", { name: "Tools" }));
+    fireEvent.change(input, { target: { value: "A previously approved message" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith("chat_stream", expect.objectContaining({ consentId: "messages-only" })));
+    const calls = vi.mocked(invoke).mock.calls.filter(([command]) => command === "chat_stream");
+    const turnId = (calls[0][1] as { requestId: string }).requestId;
+    emit("chat-token", { request_id: turnId, content: "An answer." });
+    emit("chat-done", { request_id: turnId, error: null });
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Stop generation" })).toBeNull());
+    fireEvent.change(screen.getByLabelText("Move chat to project"), { target: { value: "project-a" } });
+    await screen.findByText("Chat added to Research project.");
+    fireEvent.change(input, { target: { value: "Use this project" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+    await screen.findByText("Relevant excerpts from your indexed documents");
+    expect(vi.mocked(invoke).mock.calls.filter(([command]) => command === "chat_stream")).toHaveLength(1);
+    expect(invoke).toHaveBeenCalledWith("provider_request", expect.objectContaining({ path: "/chat/preview", body: expect.objectContaining({ project_id: "project-a", knowledge_enabled: false }) }));
+  });
+  it("keeps the draft through review and sends only after granting the selected provider", async () => {
+    const original = vi.mocked(invoke).getMockImplementation()!;
+    let approved = false;
+    const provider = () => ({ id: "openai", label: "OpenAI", connected: true, model: "configured-model", vision: true,
+      approved_scopes: approved ? ["messages", "memory"] : [], consent_id: approved ? "receipt-a" : null,
+      consent_model: approved ? "configured-model" : null });
+    vi.mocked(invoke).mockImplementation(async (command, args) => {
+      if (command === "provider_request") {
+        const request = args as { path: string; method: string };
+        if (request.path === "/providers") return { local_only: false, providers: [provider()] };
+        if (request.path === "/chat/preview") return { provider: "openai", model: "configured-model", scopes: ["messages", "memory"], messages: [{ role: "user", content: "My reviewed question" }] };
+        if (request.path.endsWith("/consent")) { approved = true; return provider(); }
+      }
+      return original(command, args);
+    });
+    const input = await setup();
+    await screen.findByRole("option", { name: /OpenAI · configured-model/ });
+    fireEvent.change(screen.getByLabelText("Chat provider"), { target: { value: "openai" } });
+    fireEvent.change(input, { target: { value: "My reviewed question" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+    await screen.findByText("Relevant saved memories");
+    expect(invoke).not.toHaveBeenCalledWith("chat_stream", expect.anything());
+    expect(input.value).toBe("My reviewed question");
+    fireEvent.click(screen.getByRole("button", { name: "Allow and send" }));
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith("chat_stream", expect.objectContaining({
+      provider: "openai", model: "configured-model", consentId: "receipt-a", connectorContextEnabled: false,
+    })));
+    expect(screen.getByText("Cloud · OpenAI")).toBeDefined();
+    expect(screen.queryByRole("dialog", { name: "Review cloud request" })).toBeNull();
+  });
+});

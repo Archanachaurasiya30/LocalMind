@@ -6,6 +6,24 @@ import { FirstRunSetup } from "../components/FirstRunSetup";
 
 beforeEach(() => { vi.clearAllMocks(); vi.mocked(listen).mockResolvedValue(() => {}); });
 afterEach(cleanup);
+it("waits for the service before checking models and continues automatically when ready", async () => {
+  vi.mocked(invoke).mockImplementation(async command => command === "list_ollama_models" ? ["qwen3:8b"] : { ready: true });
+  const done = vi.fn();
+  const { rerender } = render(<FirstRunSetup runtimeStatus="starting" onComplete={done} />);
+  expect(screen.getByRole("status").textContent).toContain("Starting LocalMind");
+  expect(invoke).not.toHaveBeenCalled();
+  expect(screen.queryByRole("alert")).toBeNull();
+  rerender(<FirstRunSetup runtimeStatus="ready" onComplete={done} />);
+  await waitFor(() => expect(done).toHaveBeenCalledOnce());
+});
+it("offers service recovery instead of a model failure during failed startup", () => {
+  const restart = vi.fn();
+  render(<FirstRunSetup runtimeStatus="failed" onRestartService={restart} onComplete={vi.fn()} />);
+  expect(invoke).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Restart service" }));
+  expect(restart).toHaveBeenCalledOnce();
+  expect(screen.queryByRole("button", { name: "Retry model check" })).toBeNull();
+});
 it("changes the selected chat model only after an explicit choice and never downloads it automatically", async () => {
   vi.mocked(invoke).mockResolvedValue([]);
   const choose = vi.fn();
