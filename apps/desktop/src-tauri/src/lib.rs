@@ -183,6 +183,22 @@ pub struct ConversationMessage {
     pub thinking: Option<String>,
     #[serde(default)]
     pub sources: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub attachments: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub status: Option<String>,
+    #[serde(default)]
+    pub partial: bool,
+    #[serde(default)]
+    pub error: bool,
+    #[serde(default)]
+    pub error_message: Option<String>,
+    #[serde(default)]
+    pub cancelled: bool,
+    #[serde(default)]
+    pub request_id: Option<String>,
+    #[serde(default)]
+    pub attachment_draft_id: Option<String>,
     pub created_at: String,
 }
 
@@ -591,6 +607,11 @@ async fn chat_stream(
     project_id: Option<String>,
     conversation_id: Option<String>,
     profile: Option<String>,
+    provider: Option<String>,
+    attachment_ids: Option<Vec<String>>,
+    attachment_draft_id: Option<String>,
+    consent_id: Option<String>,
+    connector_context_enabled: Option<bool>,
     app_handle: tauri::AppHandle,
     sidecar_state: tauri::State<'_, SidecarState>,
     requests: tauri::State<'_, ChatRequests>,
@@ -604,6 +625,7 @@ async fn chat_stream(
     let result = Abortable::new(chat_stream_inner(
         request_id.clone(), message, model, history, memory_enabled, knowledge_enabled,
         embed_model, hyde_enabled, web_search_enabled, project_id, conversation_id, profile,
+        provider, attachment_ids, attachment_draft_id, consent_id, connector_context_enabled,
         app_handle, sidecar_state,
     ), registration).await;
     requests.0.lock().map_err(|e| e.to_string())?.remove(&request_id);
@@ -624,6 +646,11 @@ async fn chat_stream_inner(
     project_id: Option<String>,
     conversation_id: Option<String>,
     profile: Option<String>,
+    provider: Option<String>,
+    attachment_ids: Option<Vec<String>>,
+    attachment_draft_id: Option<String>,
+    consent_id: Option<String>,
+    connector_context_enabled: Option<bool>,
     app_handle: tauri::AppHandle,
     sidecar_state: tauri::State<'_, SidecarState>,
 ) -> Result<(), String> {
@@ -649,6 +676,11 @@ async fn chat_stream_inner(
         "web_search_enabled": web_search_enabled,
         "task_actions_enabled": true,
         "operation_id": request_id,
+        "provider": provider.unwrap_or_else(|| "ollama".to_string()),
+        "attachment_ids": attachment_ids.unwrap_or_default(),
+        "attachment_draft_id": attachment_draft_id,
+        "consent_id": consent_id,
+        "connector_context_enabled": connector_context_enabled.unwrap_or(false),
     });
 
     let resp = client
@@ -708,6 +740,11 @@ async fn chat_stream_inner(
                                 "request_id": request_id, "data": data,
                             })).ok();
                         }
+                    }
+                    Some(kind @ ("estimate" | "usage")) => {
+                        app_handle.emit(&format!("chat-{kind}"), serde_json::json!({
+                            "request_id": request_id, "data": value,
+                        })).ok();
                     }
                     Some("done") => {
                         app_handle.emit("chat-done", ChatDonePayload { request_id: request_id.clone(), error: None }).ok();
@@ -1159,6 +1196,7 @@ async fn save_conversation_turn(
     assistant_content: String,
     assistant_thinking: Option<String>,
     sources: Option<Vec<serde_json::Value>>,
+    attachment_ids: Option<Vec<String>>,
     sidecar_state: tauri::State<'_, SidecarState>,
 ) -> Result<(), String> {
     let (url, token) = sidecar_url(
@@ -1170,6 +1208,7 @@ async fn save_conversation_turn(
         "assistant_content": assistant_content,
         "assistant_thinking": assistant_thinking,
         "sources": sources.unwrap_or_default(),
+        "attachment_ids": attachment_ids.unwrap_or_default(),
     });
     let client = localmind_core::http::local_client();
     let resp = client
@@ -1213,6 +1252,22 @@ async fn delete_conversation(
         .emit("conversations-updated", ConversationsUpdatedPayload { conversations })
         .ok();
     Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+#[tauri::command]
+async fn save_interrupted_turn(
+    conversation_id: String, request_id: String, user_content: String,
+    assistant_content: String, assistant_thinking: Option<String>, error: Option<String>,
+    cancelled: bool, attachment_ids: Option<Vec<String>>,
+    sidecar_state: tauri::State<'_, SidecarState>,
+) -> Result<serde_json::Value, String> {
+    let id = knowledge_id(&conversation_id).map_err(|_| "Invalid conversation identifier")?;
+    bounded_json_request(&sidecar_state, "POST", &format!("/conversations/{id}/interrupted"), Some(serde_json::json!({
+        "request_id": request_id, "user_content": user_content, "assistant_content": assistant_content,
+        "assistant_thinking": assistant_thinking, "error": error, "cancelled": cancelled,
+        "attachment_ids": attachment_ids.unwrap_or_default(),
+    })), 2 * 1024 * 1024).await
 }
 
 #[tauri::command]
@@ -1386,7 +1441,7 @@ async fn media_request(
     payload: Option<serde_json::Value>,
     sidecar_state: tauri::State<'_, SidecarState>,
 ) -> Result<serde_json::Value, String> {
-    if !matches!(operation.as_str(), "status" | "credential" | "prepare" | "submit" | "resume" | "cancel" | "image" | "install" | "preview") {
+    if !matches!(operation.as_str(), "status" | "credential" | "prepare" | "submit" | "resume" | "cancel" | "image" | "install" | "preview" | "cloud-image-prepare" | "cloud-image-submit") {
         return Err("Unknown media operation".into());
     }
     if payload.as_ref().is_some_and(|body| body.to_string().len() > 4_710_000) {
@@ -1394,6 +1449,97 @@ async fn media_request(
     }
     let body = if operation == "status" { None } else { Some(payload.unwrap_or_else(|| serde_json::json!({}))) };
     reviewed_request(&sidecar_state, &format!("/media/{operation}"), body).await
+}
+
+fn provider_path_allowed(method: &str, path: &str) -> bool {
+    if matches!((method, path), ("GET", "/providers") | ("PATCH", "/providers/policy") | ("POST", "/chat/preview")) {
+        return true;
+    }
+    let parts: Vec<_> = path.split('/').collect();
+    if parts.len() != 4 || !parts[0].is_empty() || parts[1] != "providers"
+        || !matches!(parts[2], "openai" | "anthropic" | "gemini") { return false; }
+    matches!((method, parts[3]), ("GET", "models") | ("POST", "check")
+        | ("PUT", "credential") | ("DELETE", "credential") | ("PATCH", "config")
+        | ("PUT", "consent") | ("DELETE", "consent"))
+}
+
+fn attachment_path_allowed(method: &str, path: &str) -> bool {
+    matches!((method, path), ("POST", "/attachments") | ("POST", "/attachments/preview"))
+        || (method == "DELETE" && path.strip_prefix("/attachments/").is_some_and(|id| knowledge_id(id).is_ok()))
+}
+
+async fn bounded_json_request(
+    state: &tauri::State<'_, SidecarState>, method: &str, path: &str,
+    body: Option<serde_json::Value>, limit: usize,
+) -> Result<serde_json::Value, String> {
+    if body.as_ref().is_some_and(|value| value.to_string().len() > limit) {
+        return Err("This request is too large. Use a smaller image or message.".into());
+    }
+    let (url, token) = sidecar_url(state, path)?;
+    let client = reqwest::Client::builder().no_proxy()
+        .timeout(std::time::Duration::from_secs(120)).build().map_err(|_| "Could not connect to the local service")?;
+    let method = reqwest::Method::from_bytes(method.as_bytes()).map_err(|_| "Invalid request method")?;
+    let mut request = client.request(method, url).bearer_auth(token);
+    if let Some(body) = body { request = request.json(&body); }
+    let response = request.send().await.map_err(|_| "Could not reach the local service. Retry when it is ready.")?;
+    let status = response.status();
+    let mut stream = response.bytes_stream();
+    let mut bytes = Vec::new();
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|_| "The local service response was interrupted")?;
+        if bytes.len() + chunk.len() > 96 * 1024 * 1024 { return Err("The local service response is too large".into()); }
+        bytes.extend_from_slice(&chunk);
+    }
+    let value: serde_json::Value = serde_json::from_slice(&bytes).map_err(|_| "The local service returned an invalid response")?;
+    if !status.is_success() {
+        return Err(value["detail"]["message"].as_str().or_else(|| value["detail"].as_str())
+            .unwrap_or("The local service rejected the request. Check the fields and try again.").to_string());
+    }
+    Ok(value)
+}
+
+#[tauri::command]
+async fn provider_request(method: String, path: String, body: Option<serde_json::Value>, sidecar_state: tauri::State<'_, SidecarState>) -> Result<serde_json::Value, String> {
+    if !provider_path_allowed(&method, &path) { return Err("Unknown provider operation".into()); }
+    bounded_json_request(&sidecar_state, &method, &path, body, 2 * 1024 * 1024).await
+}
+
+#[tauri::command]
+async fn visual_request(operation: String, body: serde_json::Value, sidecar_state: tauri::State<'_, SidecarState>) -> Result<serde_json::Value, String> {
+    let path = match operation.as_str() {
+        "capture" => "/visuals/capture",
+        "capture-image" => "/visuals/capture-image",
+        "validate" => "/visuals/validate",
+        "revise" => "/visuals/revise",
+        _ => return Err("Unknown visual operation".into()),
+    };
+    bounded_json_request(&sidecar_state, "POST", path, Some(body), 512 * 1024).await
+}
+
+#[tauri::command]
+async fn attachment_request(method: String, path: String, body: Option<serde_json::Value>, sidecar_state: tauri::State<'_, SidecarState>) -> Result<serde_json::Value, String> {
+    if !attachment_path_allowed(&method, &path) { return Err("Unknown attachment operation".into()); }
+    bounded_json_request(&sidecar_state, &method, &path, body, 11_500_000).await
+}
+
+#[cfg(test)]
+mod cloud_bridge_tests {
+    use super::{provider_path_allowed, attachment_path_allowed};
+    #[test]
+    fn only_known_provider_actions_are_forwarded() {
+        assert!(provider_path_allowed("PUT", "/providers/openai/credential"));
+        assert!(provider_path_allowed("POST", "/chat/preview"));
+        for path in ["https://example.com", "/providers/../memory", "/providers/openai/credential?x=1", "/providers/other/models", "/providers/openai/credential/"] {
+            assert!(!provider_path_allowed("PUT", path));
+        }
+        assert!(!provider_path_allowed("GET", "/providers/openai/credential"));
+    }
+    #[test]
+    fn attachment_paths_cannot_escape_the_collection() {
+        assert!(attachment_path_allowed("POST", "/attachments"));
+        assert!(!attachment_path_allowed("DELETE", "/attachments/../../profile"));
+        assert!(!attachment_path_allowed("POST", "/attachments/other"));
+    }
 }
 
 #[tauri::command]
@@ -2053,7 +2199,19 @@ async fn gmail_debug(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let mut context = tauri::generate_context!();
+    context.config_mut().identifier = localmind_core::instance::configured_identifier(
+        &context.config().identifier,
+    ).expect("could not resolve the LocalMind profile identity");
     tauri::Builder::default()
+        // Register first: a duplicate must exit before starting an AI service.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -2138,6 +2296,7 @@ pub fn run() {
             list_conversations,
             get_conversation_messages,
             save_conversation_turn,
+            save_interrupted_turn,
             delete_conversation,
             rename_conversation,
             create_project,
@@ -2151,6 +2310,9 @@ pub fn run() {
             project_graph,
             voice_request,
             media_request,
+            provider_request,
+            attachment_request,
+            visual_request,
             export_media,
             mcp_request,
             extension_request,
@@ -2180,6 +2342,6 @@ pub fn run() {
             list_people,
             gmail_debug,
         ])
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("error while running tauri application");
 }
