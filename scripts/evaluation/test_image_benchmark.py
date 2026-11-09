@@ -1,9 +1,21 @@
 import copy
 import unittest
-from image_benchmark import load_spec, hardware_gate
+from image_benchmark import load_spec, hardware_gate, quality_gate
 
 
 class ImageGateTests(unittest.TestCase):
+    def test_missing_review_and_critical_failures_never_pass(self):
+        spec = load_spec()
+        self.assertFalse(quality_gate({}, spec))
+        review = {'reviewer': 'test reviewer', 'human_review_complete': True, 'revision': spec['revision'],
+                  'scores': {item['id']: {'prompt_adherence': True, 'readable_exact_text': True,
+                                        'spatial_composition': True, 'anatomy': True} for item in spec['prompts']}}
+        self.assertTrue(quality_gate(review, spec))
+        for item, field in [('text', 'readable_exact_text'), ('composition', 'spatial_composition'), ('hands', 'anatomy')]:
+            bad = copy.deepcopy(review)
+            bad['scores'][item][field] = False
+            self.assertFalse(quality_gate(bad, spec))
+
     def test_fixed_prompts_and_unreviewed_hardware_gate(self):
         spec = load_spec()
         self.assertEqual(len(spec["revision"]), 40)

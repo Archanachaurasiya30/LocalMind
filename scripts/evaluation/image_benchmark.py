@@ -32,14 +32,43 @@ def hardware_gate(rows, spec):
             and max(row["peak_rss_mib"] for row in completed) <= rule["max_peak_rss_mib"])
 
 
+def quality_gate(review, spec):
+    """Human review is a separate receipt, never inferred from successful GPU work."""
+    if not isinstance(review, dict) or not review.get('reviewer') or review.get('human_review_complete') is not True or review.get('revision') != spec['revision']:
+        return False
+    scores = review.get('scores', {})
+    expected = {item['id'] for item in spec['prompts']}
+    if set(scores) != expected:
+        return False
+    for score in scores.values():
+        if not isinstance(score, dict) or type(score.get('prompt_adherence')) is not bool:
+            return False
+    # Critical examples must pass their specific task, even when seven easier subjects match.
+    return (sum(score['prompt_adherence'] for score in scores.values()) >= spec['gate']['min_subject_matches']
+            and scores['text'].get('readable_exact_text') is True
+            and scores['composition'].get('spatial_composition') is True
+            and scores['geometry'].get('spatial_composition') is True
+            and scores['hands'].get('anatomy') is True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, default=ROOT / "artifacts/evaluation/images/run")
     parser.add_argument("--download", action="store_true", help="Explicitly download pinned model files after license review")
     parser.add_argument("--download-only", action="store_true", help="Download and verify weights without using the GPU")
+    parser.add_argument('--review', type=Path, help='Evaluate a human review receipt against an existing run; does not load a model')
     args = parser.parse_args()
     spec = load_spec()
     args.out.mkdir(parents=True, exist_ok=True)
+    if args.review:
+        report = json.loads((args.out/'report.json').read_text(encoding='utf-8'))
+        review = json.loads(args.review.read_text(encoding='utf-8'))
+        matches = report.get('model') == spec['model'] and report.get('revision') == spec['revision'] and report.get('configuration') == spec['configuration']
+        passed = matches and hardware_gate(report['rows'], spec) and quality_gate(review, spec)
+        decision = {'enabled': bool(passed), 'decision': 'human-review-passed' if passed else 'no-go', 'model': spec['model'], 'revision': spec['revision']}
+        (args.out/'quality-gate.json').write_text(json.dumps(decision, indent=2), encoding='utf-8')
+        print(json.dumps(decision))
+        return
     model_dir = args.out.parent / "model"
     if shutil.disk_usage(args.out).free < spec["minimum_free_disk_gib"] * 1024**3:
         raise RuntimeError("Image research needs at least 20 GiB free disk space.")
