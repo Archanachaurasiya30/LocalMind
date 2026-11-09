@@ -2,6 +2,36 @@
 
 Open **Media** in the sidebar for optional local image jobs and reviewed Runway image-to-video jobs. This feature is newer than the published 0.7.1 installer. Opening the page never starts a download, generation or paid submission.
 
+## Image API in the current source build
+
+The **Image API** section uses the OpenAI key saved in Settings. Prepare a prompt,
+model and reservation, then review the exact request before sending it once.
+Local-only mode blocks preparation and submission. Opening Media does not send
+a request.
+
+The reservation is user-supplied. It is not a price quote or a provider billing
+cap. Both LocalMind's cloud budget and its media budget must permit the request.
+Actual charges cannot be calculated reliably from this adapter's response, so
+the reservation remains in the monthly usage ledger. There is no billing
+reconciliation interface yet. Check the
+provider's billing page before sending another request after an uncertain result.
+
+Successful image bytes are validated and saved locally. The gallery keeps the
+prompt, model, dimensions, timestamp and available provider request identifier.
+You can zoom, save the image, attach it to chat or select it as a reference for
+an edit. Editing creates a separate job and preserves the original. Once an
+attached image is saved in a chat, **Open image workspace** shows it beside the
+conversation.
+
+Stopping a request stops the local wait. It does not promise a provider-side
+cancellation or refund. Interrupted and uncertain requests are never submitted
+again automatically. Provider rejection releases the reservation when the
+response establishes that the request was rejected.
+
+The adapter has simulated request/response tests, including multipart edits,
+rejection, cancellation and restart recovery. A live paid acceptance run is still
+required before advertising provider compatibility as verified.
+
 ## Local image pilot
 
 The image pilot is disabled by default. The earlier SSD-1B trial passed the hardware limits but failed text, anatomy and composition quality review. Adding the worker does **not** change that result. Outputs remain experimental; there is no automatic cloud fallback.
