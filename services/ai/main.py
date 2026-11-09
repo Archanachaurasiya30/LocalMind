@@ -30,6 +30,10 @@ def _load_dotenv() -> None:
 
 
 def main() -> None:
+    if sys.argv[1:] == ["--extract-attachment"]:
+        from app.document_attachments import worker
+        worker()
+        return
     if sys.argv[1:] == ["--owned-mcp"]:
         from app.mcp_server import serve
         serve()

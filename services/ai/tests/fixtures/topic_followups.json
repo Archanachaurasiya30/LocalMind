@@ -1,0 +1,10 @@
+[
+  {"topic": "backpropagation", "request": "Explain backpropagation in neural networks", "answer": "A backward pass applies the chain rule to compute gradients.", "followup": "Please explain it with a diagram", "unrelated": "You previously studied XGBoost examples and tree splits."},
+  {"topic": "photosynthesis", "request": "Explain photosynthesis and its stages", "answer": "Light reactions supply energy for carbon fixation.", "followup": "Draw a flowchart for that", "unrelated": "You previously studied cellular respiration examples and mitochondria."},
+  {"topic": "sourdough", "request": "Describe sourdough fermentation", "answer": "Yeast and bacteria transform sugars in the dough.", "followup": "Give me an example", "unrelated": "You previously studied cake decorating and buttercream examples."},
+  {"topic": "mortgage", "request": "Explain fixed mortgage amortization", "answer": "Each payment covers interest and part of the principal.", "followup": "Explain it more deeply", "unrelated": "You previously studied stock dividends and portfolio examples."},
+  {"topic": "indexes", "request": "Explain database indexes and their tradeoffs", "answer": "An index avoids scanning every row but adds work during writes.", "followup": "Show a diagram", "unrelated": "You previously studied HTTP cache headers and proxy examples."},
+  {"topic": "watercolor", "request": "Describe watercolor glazing", "answer": "Transparent layers alter the color beneath them.", "followup": "Make that a learning exercise", "unrelated": "You previously studied charcoal sketches and shading examples."},
+  {"topic": "solar", "request": "Explain solar eclipses", "answer": "The Moon can pass between the Sun and Earth.", "followup": "Show me a diagram", "unrelated": "You previously studied ocean tides and coastal examples."},
+  {"topic": "sonnet", "request": "Describe a sonnet and its structure", "answer": "The form combines a line count with meter and rhyme conventions.", "followup": "Make it simpler", "unrelated": "You previously studied novel outlines and chapter examples."}
+]

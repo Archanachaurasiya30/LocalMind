@@ -95,13 +95,28 @@ Once models are installed, local chat and retrieval can work offline. Exact-text
 
 Setup and limitations: [Media](docs/media.md) · [Voice](docs/voice.md) · [Connections and tools](docs/connections.md) · [Image research](docs/image-research.md).
 
+The current source build also adds optional OpenAI, Anthropic and Gemini API
+connections, screenshot paste and upload, and recovery of interrupted replies.
+These additions require a new build; existing 0.8.0 installers do not gain them
+automatically. See [local and cloud chat](docs/cloud-chat.md) for setup, privacy,
+image limits and verification status.
+
+The source build also includes [a visual workspace](docs/visual-workspace.md):
+editable diagrams with saved revisions, Mermaid, charts, local learning widgets
+and saved image previews. PDF/text attachments expose their extracted pages.
+Optional [image API requests](docs/media.md#image-api-in-the-current-source-build)
+require review before sending. Live paid-image acceptance is still pending;
+arbitrary generated applications remain disabled.
+
 ## Your data
 
-The desktop app talks to an authenticated local service on loopback. LocalMind has no built-in analytics or usage tracking.
+The desktop app talks to an authenticated local service on loopback. LocalMind does not send product analytics. Optional cloud chat keeps a usage and estimated-cost ledger in your local profile.
 
 | Activity | Destination |
 | --- | --- |
 | Local chat, memory, projects and tasks | Your device; SQLite profile databases |
+| Optional cloud chat | Selected provider, after approval of destination, model and included data categories |
+| Screenshot drafts | Your profile; sent only when included in a request to a compatible model |
 | Document indexing and retrieval | Your device; SQLite and LanceDB |
 | Web search | Search provider and retrieved websites; queries may include follow-up context |
 | Connected services | The service you authorize; downloaded data remains in your profile |
@@ -109,7 +124,7 @@ The desktop app talks to an authenticated local service on loopback. LocalMind h
 | Model/runtime downloads | Ollama or the documented model/runtime host |
 | Update checks | GitHub Releases |
 
-Gmail and Runway credentials use the native OS credential store with no plaintext fallback. Workspace databases are protected by OS account permissions, **not application-level encryption**. People sharing an OS account share its default profile.
+Gmail, Runway and chat-provider credentials use the native OS credential store with no plaintext fallback. Workspace databases are protected by OS account permissions, **not application-level encryption**. People sharing an OS account share its default profile.
 
 | Platform | Default data directory |
 | --- | --- |
