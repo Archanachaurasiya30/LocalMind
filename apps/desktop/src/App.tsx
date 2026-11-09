@@ -40,7 +40,11 @@ import { KnowledgePage } from "./components/KnowledgePage";
 import { TasksPage } from "./components/TasksPage";
 import { SettingsPage } from "./components/SettingsPage";
 import { MediaPage } from "./components/MediaPage";
-import { useChat } from "./hooks/useChat";
+import { useChat, type SendSelection } from "./hooks/useChat";
+import { useProviders } from "./hooks/useProviders";
+import { useAttachments } from "./hooks/useAttachments";
+import { CloudConsent } from "./components/CloudConsent";
+import type { CloudProvider, CloudScope, ProviderId } from "./lib/providers";
 import { useConversations } from "./hooks/useConversations";
 import { useMemory } from "./hooks/useMemory";
 import { useOllama } from "./hooks/useOllama";
@@ -75,6 +79,10 @@ const NAV = [
   { id: "media", label: "Media", Icon: Film },
 ] as const;
 const EMBED_MODEL = "nomic-embed-text";
+interface PendingCloud {
+  text: string; conversationId: string; turnId?: string; selection: SendSelection;
+  provider: CloudProvider; request: Record<string, unknown>; version: number;
+}
 
 export default function App() {
   const mini = useMiniWindow();
@@ -90,6 +98,10 @@ export default function App() {
   const sidebarToggleRef = useRef<HTMLButtonElement>(null);
   const [activePage, setActivePage] = useState<PageId>("chats");
   const [modelMode, setModelMode] = useState<ModelMode>("balanced");
+  const [providerId, setProviderId] = useState<ProviderId>("ollama");
+  const providers = useProviders();
+  const cloud = providers.status?.providers.find(provider => provider.id === providerId);
+  const [pendingCloud, setPendingCloud] = useState<PendingCloud | null>(null);
   const [speedModel, setSpeedModel] = useState(
     () => localStorage.getItem("lm-speed-model") || MODEL_MAP.speed,
   );
@@ -138,6 +150,23 @@ export default function App() {
   } = useConversations();
   const { projects, assignConversation } = useProjects();
   const chatProjectId = conversations.find((c) => c.id === activeId)?.project_id ?? null;
+  const draftKey = activeId || "new";
+  const attachments = useAttachments(draftKey);
+  useEffect(() => {
+    const expand = () => { if (miniActive) void setCompact(false); };
+    window.addEventListener("localmind-visual-open", expand);
+    return () => window.removeEventListener("localmind-visual-open", expand);
+  }, [miniActive, setCompact]);
+
+  useEffect(() => {
+    const followup = (event: Event) => {
+      const text = (event as CustomEvent<unknown>).detail;
+      if (typeof text === "string" && text.length < 110_000) setDrafts(previous => ({ ...previous, [draftKey]: text + (previous[draftKey] || "") }));
+    };
+    window.addEventListener("localmind-visual-followup", followup);
+    return () => window.removeEventListener("localmind-visual-followup", followup);
+  }, [draftKey]);
+
 
   useEffect(() => {
     localStorage.setItem("lm-speed-model", speedModel);
@@ -210,16 +239,18 @@ export default function App() {
       thinking: string | null,
       conversationId: string | null,
       sources: WebSource[],
+      attachmentIds: string[] = [],
     ) => {
       const version = navigationVersion.current;
       try {
-        await saveCurrentTurn(user, answer, thinking, conversationId, sources);
+        await saveCurrentTurn(user, answer, thinking, conversationId, sources, attachmentIds);
       } catch {
         setNotice(
           "This reply could not be saved. Copy it before leaving this chat.",
         );
+        throw new Error("Conversation save failed");
       }
-      try {
+      void (async () => { try {
         const questions = await invoke<string[]>("get_followup_questions", {
           lastUser: user,
           lastAssistant: answer.slice(0, 1200),
@@ -229,7 +260,7 @@ export default function App() {
           setFollowUps(Array.isArray(questions) ? questions : []);
       } catch {
         /* Suggestions are optional; the saved answer remains usable. */
-      }
+      } })();
     },
     [saveCurrentTurn, speedModel],
   );
@@ -241,6 +272,7 @@ export default function App() {
     stopStreaming,
     loadMessages,
     clearMessages,
+    waitForPersistence,
   } = useChat({
     modelMode,
     speedModel,
@@ -252,22 +284,28 @@ export default function App() {
     embedModel: EMBED_MODEL,
     projectId: chatProjectId,
     onTurnComplete: handleComplete,
+    onTurnFailure: (text, conversationId, selection) => {
+      setDrafts(previous => ({ ...previous, [conversationId || "new"]: previous[conversationId || "new"] || text }));
+      if (selection?.attachments?.length && selection.attachmentDraftId) attachments.restore(conversationId || "new", selection.attachmentDraftId, selection.attachments);
+    },
   });
-  const draftKey = activeId || "new";
   const [voiceScope, setVoiceScope] = useState(0);
   const draft = drafts[draftKey] || "";
   const setDraft = useCallback(
     (value: string) => setDrafts((prev) => ({ ...prev, [draftKey]: value })),
     [draftKey],
   );
-  const selectedModel = modelMode === "speed" ? speedModel : balancedModel;
+  const localModel = modelMode === "speed" ? speedModel : balancedModel;
+  const selectedModel = providerId === "ollama" ? localModel : cloud?.model || "Choose a cloud model";
   const modelCheck = useModelReadiness(selectedModel, modelMode,
-    runtime.status === "ready" && setupComplete && !modelSetupOpen);
+    runtime.status === "ready" && setupComplete && !modelSetupOpen && providerId === "ollama");
   const modelAvailable = !!ollama?.models.some(
     (m) => m.name === selectedModel || m.name === `${selectedModel}:latest`,
   );
-  const ready =
-    runtime.status === "ready" && !!ollama?.running && modelAvailable && modelCheck.ready;
+  const ready = runtime.status === "ready" && (providerId === "ollama"
+    ? !!ollama?.running && modelAvailable && modelCheck.ready
+    : !!cloud?.connected && !!cloud.model && providers.status?.local_only === false);
+  const imageInput = providerId === "ollama" ? modelCheck.result?.vision : cloud?.vision;
 
   const navigate = useCallback((page: PageId) => {
     const show = () => {
@@ -282,7 +320,16 @@ export default function App() {
     });
     else show();
   }, [miniActive, setCompact]);
+  useEffect(() => {
+    const attach = (event: Event) => {
+      const file = (event as CustomEvent<unknown>).detail;
+      if (file instanceof File && file.type === "image/png" && file.size <= 8*1024*1024) { attachments.add([file]); navigate("chats"); }
+    };
+    window.addEventListener("localmind-generated-image", attach);
+    return () => window.removeEventListener("localmind-generated-image", attach);
+  }, [attachments, navigate]);
   const newChat = useCallback(() => {
+    setPendingCloud(null);
     setVoiceScope(value => value + 1);
     navigationVersion.current++;
     changingConversation.current = false;
@@ -297,6 +344,7 @@ export default function App() {
   }, [clearMessages, clearSelection, navigate]);
   const selectChat = useCallback(
     async (id: string) => {
+      setPendingCloud(null);
       setVoiceScope(value => value + 1);
       const version = ++navigationVersion.current;
       changingConversation.current = true;
@@ -307,6 +355,8 @@ export default function App() {
       setNotice(null);
       navigate("chats");
       try {
+        await waitForPersistence();
+        if (version !== navigationVersion.current) return;
         const rows = await selectConversation(id);
         if (version === navigationVersion.current)
           loadMessages(
@@ -314,6 +364,8 @@ export default function App() {
               ...m,
               thinking: m.thinking ?? undefined,
               isThinking: false,
+              errorMessage: m.error_message ?? undefined,
+              attachmentDraftId: m.attachment_draft_id,
             })),
           );
       } catch {
@@ -325,17 +377,22 @@ export default function App() {
         }
       }
     },
-    [clearMessages, loadMessages, selectConversation, navigate],
+    [clearMessages, loadMessages, selectConversation, navigate, waitForPersistence],
   );
+  const dispatchTurn = useCallback((turn: Pick<PendingCloud, "text" | "conversationId" | "turnId" | "selection">) => {
+    setDrafts(previous => ({ ...previous, [turn.conversationId]: previous[turn.conversationId]?.trim() === turn.text.trim() ? "" : previous[turn.conversationId] || "" }));
+    attachments.release(turn.conversationId, turn.selection.attachments?.map(item => item.id) || []);
+    void sendMessage(turn.text, turn.conversationId, turn.turnId, turn.selection);
+  }, [attachments, sendMessage]);
   const send = useCallback(
-    async (text: string, voiceTurnId?: string): Promise<boolean> => {
+    async (text: string, voiceTurnId?: string, retrySelection?: SendSelection): Promise<boolean> => {
       if (
         !text.trim() ||
         changingConversation.current ||
         chatLoadError ||
         sending.current ||
         isStreaming ||
-        !ready
+        !ready || pendingCloud || attachments.busy || !attachments.valid || (attachments.items.some(item => item.mime_type?.startsWith("image/")) && imageInput === false)
       )
         return false;
       sending.current = true;
@@ -343,20 +400,39 @@ export default function App() {
       const version = ++navigationVersion.current;
       setNotice(null);
       setFollowUps([]);
+      const selection: SendSelection = retrySelection || {
+        provider: providerId, model: selectedModel, consentId: cloud?.consent_id,
+        attachments: attachments.attachments, attachmentDraftId: attachments.draftId,
+      };
       try {
         const id =
           activeId || (await createConversation(text.trim().slice(0, 60))).id;
         if (version !== navigationVersion.current) return false;
-        setDrafts((prev) => {
-          const remaining =
-            prev[draftKey]?.trim() === text.trim() ? "" : prev[draftKey] || "";
-          return {
-            ...prev,
-            [draftKey]: activeId ? remaining : "",
-            [id]: remaining,
-          };
-        });
-        void sendMessage(text, id, voiceTurnId);
+        if (!activeId) {
+          attachments.move(draftKey, id);
+          setDrafts(previous => ({ ...previous, [draftKey]: "", [id]: previous[draftKey] || text }));
+        }
+        const turn = { text, conversationId: id, turnId: voiceTurnId, selection };
+        if (providerId !== "ollama" && cloud) {
+          const scopes: CloudScope[] = ["messages"];
+          if (memoryEnabled) scopes.push("memory");
+          if (knowledgeEnabled || chatProjectId) scopes.push("knowledge");
+          if (webSearchEnabled) scopes.push("web");
+          if (selection.attachments?.length || messages.some(message => message.attachments?.length)) scopes.push("attachments");
+          if (!cloud.consent_id || cloud.consent_model !== cloud.model || scopes.some(scope => !cloud.approved_scopes.includes(scope))) {
+            setPendingCloud({ ...turn, provider: cloud, version, request: {
+              message: text, model: selectedModel, provider: providerId, conversation_id: id,
+              project_id: chatProjectId, history: messages.map(message => ({ role: message.role, content: message.content })),
+              memory_enabled: memoryEnabled, knowledge_enabled: knowledgeEnabled,
+              web_search_enabled: webSearchEnabled, connector_context_enabled: false,
+              embed_model: EMBED_MODEL, profile: modelMode, hyde_enabled: hydeEnabled,
+              attachment_ids: selection.attachments?.map(item => item.id) || [],
+              attachment_draft_id: selection.attachmentDraftId,
+            } });
+            return false;
+          }
+        }
+        dispatchTurn(turn);
         return true;
       } catch {
         setNotice(
@@ -375,7 +451,9 @@ export default function App() {
       draftKey,
       isStreaming,
       ready,
-      sendMessage,
+      pendingCloud, attachments, imageInput, providerId, selectedModel, cloud,
+      memoryEnabled, knowledgeEnabled, webSearchEnabled, messages, chatProjectId,
+      modelMode, hydeEnabled, dispatchTurn,
     ],
   );
 
@@ -432,16 +510,22 @@ export default function App() {
   const retry = () => {
     const user = [...messages].reverse().find((m) => m.role === "user");
     if (!user || !ready || isStreaming) return;
-    // Failed and stopped turns are not persisted. Replace them instead of duplicating the question.
+    // Replace the displayed interrupted pair; its recovery record stays separate
+    // from completed conversation history.
     loadMessages(messages.slice(0, -2));
-    void send(user.content);
+    void send(user.content, undefined, { provider: providerId, model: selectedModel, consentId: cloud?.consent_id, attachments: user.attachments, attachmentDraftId: user.attachmentDraftId });
   };
 
   return (
     <>
-      {!setupComplete && <FirstRunSetup chatModel={selectedModel} preset={modelMode} onChooseChatModel={modelMode === "speed" ? setSpeedModel : setBalancedModel} onComplete={finishSetup} />}
+      {pendingCloud && <CloudConsent provider={pendingCloud.provider} request={pendingCloud.request}
+        onCancel={() => setPendingCloud(null)} onApprove={consentId => {
+          if (pendingCloud.version === navigationVersion.current) dispatchTurn({ ...pendingCloud, selection: { ...pendingCloud.selection, consentId } });
+          setPendingCloud(null); void providers.refresh();
+        }} />}
+      {!setupComplete && <FirstRunSetup runtimeStatus={runtime.status} onRestartService={() => void runtime.restart()} chatModel={selectedModel} preset={modelMode} onChooseChatModel={modelMode === "speed" ? setSpeedModel : setBalancedModel} onComplete={finishSetup} />}
       {setupComplete && modelSetupOpen && (
-        <FirstRunSetup chatModel={selectedModel} preset={modelMode} onChooseChatModel={modelMode === "speed" ? setSpeedModel : setBalancedModel} forceShow onComplete={closeModelSetup} />
+        <FirstRunSetup runtimeStatus={runtime.status} onRestartService={() => void runtime.restart()} chatModel={selectedModel} preset={modelMode} onChooseChatModel={modelMode === "speed" ? setSpeedModel : setBalancedModel} forceShow onComplete={closeModelSetup} />
       )}
       <div
         className={`app-shell ${miniActive ? "mini-mode" : ""}`}
@@ -620,7 +704,7 @@ export default function App() {
                 {activePage === "media"
                   ? "Local + optional cloud"
                   : activePage === "chats"
-                    ? (webSearchEnabled ? "Web search enabled" : "Local model")
+                    ? (providerId !== "ollama" ? `Cloud · ${cloud?.label || providerId}` : webSearchEnabled ? "Web search enabled" : "Local model")
                     : "Local workspace"}
               </span>
             </div>
@@ -663,6 +747,7 @@ export default function App() {
                 <MessageList
                   key={`messages-${activeId || "new"}`}
                   messages={messages}
+                  conversationId={activeId || undefined}
                   isStreaming={isStreaming}
                   isSearching={isSearching}
                   followUpQuestions={followUps}
@@ -679,7 +764,7 @@ export default function App() {
                 </div>
               )}
               {!miniActive && activeId && !loadingConversation && !chatLoadError && <TaskActions key={`tasks-${activeId}`} conversationId={activeId} projectId={chatProjectId} isStreaming={isStreaming} onOpenTasks={() => navigate("tasks")} />}
-              <ChatReadiness
+              {(providerId === "ollama" || runtime.status !== "ready") && <ChatReadiness
                 runtimeStatus={runtime.status}
                 runtimeError={runtime.error}
                 ollamaRunning={!!ollama?.running}
@@ -691,7 +776,8 @@ export default function App() {
                 onRetry={modelCheck.retry}
                 onSettings={() => navigate("settings")}
                 onDownloads={() => setModelSetupOpen(true)}
-              />
+              />}
+              {providerId !== "ollama" && !ready && runtime.status === "ready" && <div className="app-notice" role="status">{providers.status?.local_only ? "Cloud chat is blocked by your local-only setting." : "Connect this provider and select a model in Settings."}<button className="secondary-button" onClick={() => navigate("settings")}>Open settings</button></div>}
               <Composer
                 messages={messages}
                 voiceScope={`${voiceScope}:${chatProjectId || "unassigned"}`}
@@ -702,7 +788,7 @@ export default function App() {
                 onStop={stopStreaming}
                 isStreaming={isStreaming}
                 disabled={
-                  !ready || loadingConversation || chatLoadError || pendingSend
+                  !ready || loadingConversation || chatLoadError || pendingSend || !!pendingCloud
                 }
                 memoryEnabled={memoryEnabled}
                 onMemoryToggle={() => setMemoryEnabled((v) => !v)}
@@ -715,6 +801,15 @@ export default function App() {
                 modelName={selectedModel}
                 modelNames={{ speed: speedModel, balanced: balancedModel }}
                 onOpenKnowledge={() => navigate("knowledge")}
+                provider={providerId} providers={providers.status?.providers} localOnly={providers.status?.local_only ?? true}
+                onProviderChange={value => { setPendingCloud(null); setProviderId(value); }}
+                onOpenProviderSettings={() => navigate("settings")}
+                attachments={attachments.items} onAddAttachments={attachments.add}
+                onRemoveAttachment={attachments.remove} onRetryAttachment={attachments.retry}
+                attachmentMode={attachments.mode} onAttachmentModeChange={attachments.setMode} attachmentBusy={attachments.busy} attachmentValid={attachments.valid} imageInput={imageInput}
+                attachmentNotice={attachments.notice}
+                installedModels={ollama?.models.map(model => model.name)}
+                onLocalModelChange={modelMode === "speed" ? setSpeedModel : setBalancedModel}
               />
               {messages.length === 0 && !loadingConversation && !chatLoadError && !miniActive && <ChatStarters onChoose={openPrompt} />}
             </div>

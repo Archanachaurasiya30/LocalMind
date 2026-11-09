@@ -3,7 +3,7 @@
 export type ModelMode = "speed" | "balanced" | "boost";
 
 export interface WebSource {
-  kind?: "web" | "knowledge";
+  kind?: "web" | "knowledge" | "document";
   citation?: string;
   chunk_id?: string;
   source_id?: string;
@@ -32,6 +32,10 @@ export interface Message {
   cancelled?: boolean;
   sources?: WebSource[];
   diagnostics?: ResponseDiagnostics;
+  attachments?: import("./lib/attachments").ChatAttachment[];
+  attachmentDraftId?: string;
+  conversation_id?: string;
+  usage?: { input_tokens: number | null; output_tokens: number | null; cost_usd: number | null; cost_is_estimate?: boolean };
 }
 
 export interface ResponseDiagnostics {
