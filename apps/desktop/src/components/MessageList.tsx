@@ -5,8 +5,10 @@ import { Brand } from "./Brand";
 import { AnswerContent, CopyButton, safeWebUrl } from "./AnswerContent";
 import { ResponseDetails } from "./ResponseDetails";
 import { KnowledgeCitation } from "./KnowledgeCitation";
+import { SavedAttachments } from "./ChatAttachments";
 
 interface MessageListProps {
+  conversationId?: string;
   messages: Message[];
   isStreaming: boolean;
   isSearching?: boolean;
@@ -16,6 +18,7 @@ interface MessageListProps {
 }
 
 export function MessageList({
+  conversationId,
   messages,
   isStreaming,
   isSearching,
@@ -71,6 +74,7 @@ export function MessageList({
             <MessageRow
               key={message.id}
               message={message}
+              conversationId={conversationId}
               streaming={isStreaming && index === messages.length - 1}
               searching={!!isSearching}
               onRegenerate={index === messages.length - 1 ? onRegenerate : undefined}
@@ -107,12 +111,14 @@ export function MessageList({
 }
 
 const MessageRow = memo(function MessageRow({
+  conversationId,
   message,
   streaming,
   searching,
   onRegenerate,
 }: {
   message: Message;
+  conversationId?: string;
   streaming: boolean;
   searching: boolean;
   onRegenerate?: () => void;
@@ -136,9 +142,9 @@ const MessageRow = memo(function MessageRow({
         </details>
       )}
       {user ? (
-        <div className="user-text">{message.content}</div>
+        <><div className="user-text">{message.content}</div>{!!message.attachments?.length && <SavedAttachments items={message.attachments} conversationId={message.conversation_id} />}</>
       ) : message.content ? (
-        <AnswerContent content={message.content} sources={message.sources} />
+        <AnswerContent conversationId={streaming ? undefined : conversationId} content={message.content} sources={message.sources} />
       ) : streaming ? (
         <p className="response-status">
           {searching ? "Finding sources…" : message.isThinking ? "Thinking…" : "Preparing a response…"}
@@ -158,8 +164,10 @@ const MessageRow = memo(function MessageRow({
         </details>
       )}
       {message.errorMessage && <p className="response-status" role="note">{message.errorMessage}</p>}
+      {(message.sources || []).some(source => source.kind === "document") && <details className="message-sources"><summary>Document excerpts sent with this response</summary>{message.sources?.filter(source => source.kind === "document").map(source => <section key={source.title}><h4>{source.title}</h4><pre style={{ whiteSpace: "pre-wrap" }}>{source.snippet}</pre></section>)}</details>}
       {message.cancelled && <p className="response-status">Response stopped</p>}
       {!user && message.diagnostics && <ResponseDetails data={message.diagnostics} />}
+      {!user && message.usage && <p className="page-footnote">API usage: {message.usage.input_tokens ?? "unknown"} input tokens · {message.usage.output_tokens ?? "unknown"} output tokens · {message.usage.cost_usd == null ? "Cost unknown" : `Estimated $${message.usage.cost_usd.toFixed(4)}`}</p>}
       {(message.sources || []).some((source) => source.kind === "knowledge") && (
         <details className="message-sources">
           <summary>Local file passages</summary>

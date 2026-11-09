@@ -6,6 +6,7 @@ import rehypeKatex from "rehype-katex";
 import { Check, Copy } from "lucide-react";
 import "katex/dist/katex.min.css";
 import type { WebSource } from "../types";
+import { VisualCard } from "./VisualCard";
 import { KnowledgeCitation } from "./KnowledgeCitation";
 
 /** Generated links may open web pages, but never local files or application protocols. */
@@ -117,12 +118,19 @@ const CodeBlock: NonNullable<Components["pre"]> = ({ children }) => {
 
 const EMPTY_SOURCES: WebSource[] = [];
 
-export const AnswerContent = memo(function AnswerContent({ content, sources = EMPTY_SOURCES }: {
+export const AnswerContent = memo(function AnswerContent({ content, sources = EMPTY_SOURCES, conversationId }: {
   content: string;
   sources?: WebSource[];
+  conversationId?: string;
 }) {
   const components = useMemo<Components>(() => ({
-    pre: CodeBlock,
+    pre: ({ children, ...props }) => {
+      const child = Children.toArray(children)[0];
+      const code = isValidElement<{ className?: string; children?: ReactNode }>(child) ? child : null;
+      const language = /language-([a-z0-9_-]+)/i.exec(code?.props.className || "")?.[1];
+      if (language === "localmind-visual" || language === "mermaid") return <VisualCard source={plainText(code?.props.children).replace(/\n$/, "")} content={content} conversationId={conversationId} mermaid={language === "mermaid"} />;
+      return <CodeBlock {...props}>{children}</CodeBlock>;
+    },
     a: ({ href, children }) => {
       const local = sources.find((source) => source.kind === "knowledge" && source.chunk_id && href === `#knowledge-${source.chunk_id}`);
       if (local) return <KnowledgeCitation source={local} inline />;
@@ -147,7 +155,7 @@ export const AnswerContent = memo(function AnswerContent({ content, sources = EM
       return url ? <a href={url} target="_blank" rel="noopener noreferrer">{alt || "Open image"}</a> : <span>{alt || "Image unavailable"}</span>;
     },
     table: ({ children }) => <div className="table-scroll" role="region" aria-label="Response table" tabIndex={0}><table>{children}</table></div>,
-  }), [sources]);
+  }), [sources, content, conversationId]);
   return (
     <div className="markdown-content">
       <ReactMarkdown

@@ -1,0 +1,30 @@
+.visual-card { border:1px solid var(--border,#bfcfc7); border-radius:12px; padding:16px; margin:16px 0; }
+.visual-card small { display:block; margin-top:8px; }
+.visual-panel { --panel-width:680px; position:fixed; z-index:65; top:32px; bottom:0; right:0; width:min(var(--panel-width),100vw); overflow:auto; padding:24px; background:var(--bg,#f6f8f5); color:var(--text,#243c33); box-shadow:-4px 0 22px #0002; border-left:1px solid var(--border,#bfcfc7); }
+.visual-panel.visual-expanded { width:100vw; }
+.visual-panel header,.visual-toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:12px 0; }
+.visual-panel header h2 { flex:1; font-size:20px; }
+.visual-panel > header { position:sticky; top:-24px; z-index:5; background:var(--bg); padding:12px 0; }
+.visual-panel button,.visual-panel select,.visual-card>button { border:1px solid var(--border,#a9c5b8); border-radius:8px; padding:7px 12px; background:var(--surface,#fff); color:inherit; }
+.visual-panel button:disabled { opacity:.45; }
+.visual-panel label { display:block; margin:8px 0; }
+.visual-panel input:not([type=checkbox]),.visual-panel textarea { display:block; max-width:100%; }
+.visual-panel textarea { width:100%; min-height:160px; font-family:monospace; }
+.visual-panel [hidden] { display:none!important; }
+.mermaid-visual { background:#f8faf8; border-radius:8px; padding:12px; color:#243c33; }
+.mermaid-visual rect,.mermaid-visual polygon,.mermaid-visual circle { fill:#e6f0e9; stroke:#34695e; }
+.mermaid-visual text,.mermaid-visual tspan { fill:#243c33; }
+.mermaid-visual path,.mermaid-visual line { stroke:#34695e; }
+.mermaid-visual .flowchart-link { fill:none; }
+.visual-graph { height:360px; min-width:260px; background:var(--surface-2); border:1px solid var(--border); }
+.visual-graph .react-flow__edge-path { stroke:var(--text-2); }
+.visual-graph .react-flow__controls-button { background:var(--surface); color:var(--text); border-color:var(--border); padding:0; border-radius:0; width:30px; height:30px; }
+.visual-graph .react-flow__controls-button svg { fill:currentColor; }
+.visual-panel pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:400px; overflow:auto; }
+.mermaid-visual svg,.visual-chart { max-width:100%; }
+.visual-graph .react-flow { --xy-node-background-color:var(--surface); --xy-node-color:var(--text); --xy-edge-stroke:var(--text-2); --xy-controls-button-background-color:var(--surface); --xy-controls-button-color:var(--text); }
+.visual-provenance { font-size:12px; opacity:.75; overflow-wrap:anywhere; }
+.visual-comparison { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.visual-panel table { width:100%; border-collapse:collapse; }
+.visual-panel td,.visual-panel th { border-bottom:1px solid #bacdc0; text-align:left; padding:6px; }
+@media(prefers-reduced-motion:reduce) { .visual-panel * { animation:none!important; transition:none!important; } }

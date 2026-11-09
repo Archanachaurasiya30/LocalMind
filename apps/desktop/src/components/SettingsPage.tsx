@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { OllamaStatus } from "../hooks/useOllama";
 import { ModelProfileSettings } from "./ModelProfileSettings";
+import { ProviderSettings } from "./ProviderSettings";
 import "./supporting-pages.css";
 
 interface SettingsPageProps {
@@ -26,6 +27,7 @@ interface SettingsPageProps {
 }
 const SECTIONS = [
   { id: "models", label: "Models", icon: Cpu },
+  { id: "cloud", label: "Cloud models", icon: Globe },
   { id: "hardware", label: "Hardware", icon: HardDrive },
   { id: "search", label: "Web search", icon: Globe },
   { id: "knowledge", label: "Knowledge", icon: BookOpen },
@@ -59,6 +61,7 @@ export function SettingsPage(props: SettingsPageProps) {
           </nav>
           <div className="settings-content">
             {section === "models" && <ModelSettings {...props} />}
+            {section === "cloud" && <ProviderSettings />}
             {section === "hardware" && (
               <HardwareSettings status={props.ollamaStatus} />
             )}
@@ -108,8 +111,8 @@ export function SettingsPage(props: SettingsPageProps) {
                   <div>
                     <h3>Local AI</h3>
                     <p>
-                      Responses are generated through Ollama on this computer.
-                      Model downloads require an internet connection.
+                      When a local model is selected, responses use Ollama on this computer.
+                      Model downloads require an internet connection. Optional cloud models send approved chat context to your selected API provider.
                     </p>
                   </div>
                   <div>

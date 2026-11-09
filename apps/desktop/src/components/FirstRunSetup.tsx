@@ -11,6 +11,7 @@ import {
 import "./supporting-pages.css";
 import { MODEL_MAP } from "../types";
 import type { ModelReadiness } from "../hooks/useModelReadiness";
+import type { SidecarStatus } from "../hooks/useSidecarStatus";
 
 const MODELS = [
   {
@@ -55,12 +56,16 @@ export function FirstRunSetup({
   chatModel = MODEL_MAP.balanced,
   preset = "balanced",
   onChooseChatModel,
+  runtimeStatus = "ready",
+  onRestartService,
 }: {
   onComplete: () => void;
   forceShow?: boolean;
   chatModel?: string;
   preset?: string;
   onChooseChatModel?: (model: string) => void;
+  runtimeStatus?: SidecarStatus;
+  onRestartService?: () => void;
 }) {
   const catalog = MODELS.some(model => model.name === chatModel) ? MODELS : [...MODELS, {
     name: chatModel, label: chatModel, description: "Your selected chat model.", size: "Size depends on model",
@@ -82,6 +87,7 @@ export function FirstRunSetup({
   const dialogRef = useRef<HTMLDivElement>(null);
   const unlistenRef = useRef<UnlistenFn | null>(null);
   useEffect(() => {
+    if (runtimeStatus !== "ready") return;
     let cancelled = false;
     mounted.current = true;
     invoke<string[]>("list_ollama_models")
@@ -110,7 +116,7 @@ export function FirstRunSetup({
       mounted.current = false;
       unlistenRef.current?.();
     };
-  }, [onComplete, forceShow, chatModel, preset, attempt]);
+  }, [onComplete, forceShow, chatModel, preset, attempt, runtimeStatus]);
   useEffect(() => {
     dialogRef.current?.focus();
   }, [checking]);
@@ -224,7 +230,15 @@ export function FirstRunSetup({
           }
         }}
       >
-        {checking ? (
+        {runtimeStatus !== "ready" ? (
+          <div className="setup-checking" role="status">
+            {runtimeStatus === "starting" ? <LoaderCircle className="spin" size={25} /> : <AlertCircle size={25} />}
+            <h1 id="setup-title">{runtimeStatus === "starting" ? "Starting LocalMind" : "The local service couldn't start"}</h1>
+            <p>{runtimeStatus === "starting" ? "Your installed models will be checked when the service is ready." : "Restart the service to continue setup. Your installed models stay on this device."}</p>
+            {runtimeStatus === "failed" && onRestartService && <button className="page-button" type="button" onClick={onRestartService}>Restart service</button>}
+            {runtimeStatus === "failed" && <button className="page-button" type="button" onClick={onComplete}>Set up later</button>}
+          </div>
+        ) : checking ? (
           <div className="setup-checking" role="status">
             <LoaderCircle className="spin" size={25} />
             <h1 id="setup-title">Checking your local models</h1>

@@ -2,10 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Film, Image as ImageIcon, Download, RefreshCw } from "lucide-react";
 import "./media.css";
+import { CloudImageStudio } from "./CloudImageStudio";
 
 export interface MediaJob {
   id: string;
-  kind: "image" | "image-install" | "video";
+  kind: "image" | "image-install" | "video" | "cloud-image";
   state: "review" | "submitting" | "unknown" | "queued" | "generating" | "downloading" | "paused" | "failed" | "cancelled" | "completed";
   prompt: string;
   model: string;
@@ -116,6 +117,7 @@ export function MediaPage() {
     {error && <p className="page-notice error" role="alert">{error}</p>}
     {notice && <p className="page-notice" role="status">{notice}</p>}
     {!catalog ? <p role="status">Connecting to your media library…</p> : <>
+      <CloudImageStudio jobs={catalog.jobs} />
       <div className="media-create-grid">
         <section className="media-card" aria-labelledby="image-studio-title">
           <header><ImageIcon size={20} aria-hidden="true" /><h2 id="image-studio-title">Local images</h2><span className="page-badge">Experimental</span></header>
@@ -164,7 +166,7 @@ export function MediaPage() {
       </section>}
       <section className="media-library" aria-labelledby="media-jobs-title"><header><h2 id="media-jobs-title">Your jobs</h2><span className="muted">Saved on this device · latest 100</span></header>
         {catalog.jobs.length === 0 && <div className="media-empty"><ImageIcon size={30} aria-hidden="true" /><h3>A place for what you create</h3><p>Your previews, generated images and video jobs will appear here.</p></div>}
-        <div className="media-jobs">{catalog.jobs.map(job => <article className="media-card" key={job.id} aria-label={`${job.kind} job: ${job.prompt}`}>
+        <div className="media-jobs">{catalog.jobs.filter(job => job.kind !== "cloud-image").map(job => <article className="media-card" key={job.id} aria-label={`${job.kind} job: ${job.prompt}`}>
           <header><span className="page-badge">{job.location}</span><strong>{job.state}</strong></header>
           <h3>{job.kind === "image-install" ? "Image model download" : job.prompt}</h3>
           {active.has(job.state) && <progress max={100} value={job.progress || undefined} aria-label="Job progress" />}
@@ -178,7 +180,7 @@ export function MediaPage() {
             {job.kind !== "video" && active.has(job.state) && <button className="page-button" disabled={busy} onClick={() => void action(async () => { await request("cancel", { job_id: job.id }); })}>Cancel</button>}
             {job.state === "paused" && job.provider_id && <button className="page-button" disabled={busy} onClick={() => void action(async () => { await request("resume", { job_id: job.id }); })}><RefreshCw size={14} aria-hidden="true" />Resume status checks</button>}
             {job.output && job.kind === "image" && !previews[job.id] && <button className="page-button" disabled={busy} onClick={() => void action(async () => { const result = await request<{ image: string }>("preview", { job_id: job.id }); setPreviews(values => ({ ...values, [job.id]: result.image })); })}>View image</button>}
-            {job.output && job.state === "completed" && <button className="page-button" disabled={busy} onClick={() => void action(async () => { const saved = await invoke<boolean>("export_media", { jobId: job.id, kind: job.kind }); if (saved) setNotice("Generated media saved to your selected location."); })}><Download size={14} aria-hidden="true" />Save {job.kind}</button>}
+            {job.output && job.state === "completed" && <button className="page-button" disabled={busy} onClick={() => void action(async () => { const saved = await invoke<boolean>("export_media", { jobId: job.id, kind: job.kind === "cloud-image" ? "image" : job.kind }); if (saved) setNotice("Generated media saved to your selected location."); })}><Download size={14} aria-hidden="true" />Save {job.kind}</button>}
           </div>
         </article>)}</div>
       </section>
