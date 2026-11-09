@@ -197,3 +197,59 @@ per request, the partial report is saved after each result, and any infrastructu
 exit code 2. Review complete answers before comparing models; a lexical pass is not a human pass.
 GPU execution can vary despite equal seeds. No model is downloaded or made the default by this command.
 Use a new output filename for each run. Reports stay under the ignored `artifacts/` folder.
+
+## Local and cloud experience comparison
+
+`experience-cases.json` contains 60 synthetic tasks across 12 categories, including
+20 fixed-history follow-ups. Forty are development tasks; the other 20 are held out.
+The topic-continuity tests cover different subjects rather than embedding one named
+topic in the application. Do not train on this suite or repeatedly tune against its
+held-out split.
+
+Prepare a run without network calls:
+
+```powershell
+python scripts/evaluation/compare_experience.py prepare --out artifacts/evaluation/experience-plan
+```
+
+For execution, use an isolated LocalMind test-service profile. Set
+`LOCALMIND_EVAL_TOKEN` to that service's bearer token and supply its loopback URL.
+The harness does not read an installed application's token, import personal chats,
+or save API keys. The local model must already be installed and must not be an
+Ollama cloud alias.
+
+```powershell
+python scripts/evaluation/compare_experience.py run --execute --service http://127.0.0.1:8765 --arm direct:ollama:qwen3:8b --arm app:ollama:qwen3:8b --out artifacts/evaluation/experience-local
+```
+
+Cloud comparisons use `app:openai:MODEL_ID`, `app:anthropic:MODEL_ID`, or
+`app:gemini:MODEL_ID` and additionally require `--allow-cloud`. Configure credentials,
+data-sharing consent, model access and a spending limit in the isolated profile
+first. No cloud evaluation runs automatically in CI. Failed or interrupted paid
+requests are not replayed automatically; use a fresh output directory for a new run.
+
+The runner randomizes arm execution order per task, records time to first visible
+text, total duration, output length, reported token usage and estimated cost when
+available. Unknown cloud cost stays unknown. The direct arm uses a fixed local
+generation configuration; the app arm exercises the real routing and provider
+defaults. Inspect these settings before attributing a difference to model capability.
+The service harness does not verify the desktop renderer, microphone or installer.
+
+Review `blind-review.json` before opening `private-review-key.json` or `run.json`.
+Give each answer correctness, relevance and repetition scores from 0 to 4, where
+4 is best, and choose a preferred label or `tie`. Leave unreviewed fields null.
+The review includes reversed-order copies of up to ten tasks; they audit position
+consistency without additional inference calls or double-counting quality scores.
+Answer text itself can reveal a model's identity, so the labels alone cannot ensure
+full blinding. Record any rendered-output problem separately from prose quality.
+
+```powershell
+python scripts/evaluation/compare_experience.py score --review artifacts/evaluation/experience-local/blind-review.json --key artifacts/evaluation/experience-local/private-review-key.json --out artifacts/evaluation/experience-local
+```
+
+Unscored reviews fail validation unless `--allow-partial` is explicit. The summary
+reports mirror consistency and how often the longest answer was preferred; neither
+is an automatic proof of bias or a release approval. Have a second reviewer inspect
+disagreements. Run `--split held_out` only after the development comparison and
+implementation choices are frozen. Generating this corpus and testing the runner
+does not constitute a completed human or paid-model comparison.
