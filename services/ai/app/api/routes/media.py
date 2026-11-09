@@ -36,6 +36,24 @@ class Review(Image):
     ratio: Literal["1280:720", "720:1280", "960:960"]
 
 
+class CloudImage(Image):
+    model: Literal['gpt-image-2', 'gpt-image-1.5', 'gpt-image-1-mini']
+    allowance_cents: int = Field(ge=1, le=500)
+    reference_id: str | None = Field(default=None, max_length=36)
+
+
+@router.post('/cloud-image-prepare')
+async def cloud_image_prepare(body: CloudImage):
+    from app.cloud_images import prepare
+    return await execute(lambda: prepare(**body.model_dump()))
+
+
+@router.post('/cloud-image-submit')
+async def cloud_image_submit(body: Job):
+    from app.cloud_images import submit
+    return await execute(lambda: submit(media.jobs(), store.identifier(body.job_id)))
+
+
 async def execute(work):
     try:
         result = work()
