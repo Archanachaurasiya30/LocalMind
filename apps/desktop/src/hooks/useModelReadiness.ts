@@ -12,6 +12,8 @@ export interface ModelReadiness {
   digest?: string;
   context_window?: number;
   response_tokens?: number;
+  vision?: boolean;
+  capabilities?: string[];
 }
 
 export function useModelReadiness(model: string, preset: string, enabled: boolean) {

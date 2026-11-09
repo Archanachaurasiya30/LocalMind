@@ -5,6 +5,7 @@
 // calls saveCurrentTurn() after each assistant reply completes.
 
 import type { WebSource } from "../types";
+import type { ChatAttachment } from "../lib/attachments";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -24,6 +25,13 @@ export interface ConversationMessage {
   content: string;
   thinking: string | null;
   sources?: WebSource[];
+  attachments?: ChatAttachment[];
+  attachment_draft_id?: string;
+  status?: string;
+  partial?: boolean;
+  error?: boolean;
+  error_message?: string | null;
+  cancelled?: boolean;
   created_at: string;
 }
 
@@ -112,6 +120,7 @@ export function useConversations() {
       assistantThinking: string | null,
       conversationId: string | null = activeId,
       sources: WebSource[] = [],
+      attachmentIds: string[] = [],
     ): Promise<void> => {
       if (!conversationId) return;
       await invoke("save_conversation_turn", {
@@ -120,6 +129,7 @@ export function useConversations() {
         assistantContent,
         assistantThinking,
         sources,
+        attachmentIds,
       });
     },
     [activeId],
