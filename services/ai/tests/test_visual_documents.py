@@ -148,6 +148,25 @@ class VisualTests(unittest.TestCase):
 class DocumentTests(unittest.TestCase):
     setUp = VisualTests.setUp
 
+    def test_text_worker_starts_without_server_dependencies(self):
+        import subprocess
+        import sys
+        from pathlib import Path
+
+        entry = Path(__file__).resolve().parents[1] / 'main.py'
+        # Disable site-packages and inherited dependency paths in the real child.
+        environment = {key: value for key, value in os.environ.items() if key.upper() != 'PYTHONPATH'}
+        result = subprocess.run(
+            [sys.executable, '-S', str(entry), '--extract-attachment'],
+            input=json.dumps({'data': base64.b64encode(b'Plain text').decode(), 'suffix': '.txt'}),
+            capture_output=True, text=True, encoding='utf-8', timeout=20, env=environment,
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertNotIn('error', payload)
+        self.assertEqual(payload['result']['pages'][0]['text'], 'Plain text')
+
     def test_text_excerpt_is_exact_bounded_and_labelled(self):
         data = extract(('A'*14000).encode(), '.txt')
         self.assertEqual(data['pages'][0]['text'], 'A'*12000)

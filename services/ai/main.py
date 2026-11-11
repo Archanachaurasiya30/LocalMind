@@ -10,8 +10,6 @@ import os
 import sys
 from pathlib import Path
 
-import uvicorn
-
 
 def _load_dotenv() -> None:
     """Load key=value pairs from services/ai/.env into os.environ (stdlib, no dotenv package)."""
@@ -59,6 +57,8 @@ def main() -> None:
     if not 1 <= port <= 65535:
         print("LOCALMIND_PORT must be between 1 and 65535", file=sys.stderr)
         sys.exit(1)
+
+    import uvicorn
 
     from app.main import app as fastapi_app  # noqa: PLC0415
 
