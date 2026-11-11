@@ -65,6 +65,8 @@ Stopping a turn, switching chats and retrying a failed request are different ope
 | [scripts/media](../scripts/media) | Optional image worker and media research tooling, separate from the normal desktop service dependencies. |
 | [scripts/release](../scripts/release) | Sidecar/runtime packaging, installer checks, signing verification and publishing tooling. |
 | [.github/workflows](../.github/workflows) | Frontend, Python, Rust, release and walkthrough automation. |
+| [scripts/contributing](../scripts/contributing), [.github/pull_request_template.md](../.github/pull_request_template.md) | PR declaration checks and their tests. The check reads event metadata and does not perform an AI code review. |
+| [.github/skills/team-review](../.github/skills/team-review), [review guide](REVIEWING.md) | Review perspectives, evidence requirements and human merge responsibility. [Maintainer setup](MAINTAINER_SETUP.md) covers optional Copilot activation. |
 | [docs/watch](watch) | Browser video player for the README walkthrough. |
 
 ## Where to make a change

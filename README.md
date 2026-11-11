@@ -154,6 +154,8 @@ For [bug reports](https://github.com/Swarneil1905/LocalMind/issues), include ver
 
 New to the repository? Read the [contributor guide](CONTRIBUTING.md) for setup, checks and your first pull request. The [codebase map](docs/CODEBASE.md) traces a chat message through the app and lists the files and tests for each feature. Bug reports, documentation fixes and usability testing are useful contributions too.
 
+The [review guide](docs/REVIEWING.md) explains how changes are reviewed. AI-assisted contributions are welcome with [disclosure and human verification](docs/AI_CONTRIBUTIONS.md). The PR template, drafting prompt and team-review procedure help keep submissions consistent without requiring a paid tool.
+
 The stack is React/TypeScript, Tauri/Rust, Python/FastAPI, SQLite/LanceDB and Ollama. CI uses **Node.js 22, pnpm 11.0.9, Python 3.11 and Rust stable**. Native builds need the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/). Start with the [desktop development guide](apps/desktop/README.md). Docker is not required.
 
 | Directory | Responsibility |
